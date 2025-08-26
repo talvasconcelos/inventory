@@ -1,0 +1,9 @@
+{
+  "repos": [
+    {
+      "id": "inventory",
+      "organisation": "talvasconcelos",
+      "repository": "inventory"
+    }
+  ]
+}
