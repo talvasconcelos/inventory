@@ -1003,7 +1003,7 @@ wheels = [
 ]
 
 [[package]]
-name = "lnbits-example"
+name = "lnbits-inventory"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [

@@ -2,7 +2,6 @@ from http import HTTPStatus
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-
 from lnbits.decorators import require_invoice_key
 
 from .models import Example
