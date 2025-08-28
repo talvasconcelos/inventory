@@ -8,7 +8,7 @@ from .tasks import wait_for_paid_invoices
 from .views import inventory_ext_generic
 from .views_api import inventory_ext_api
 
-inventory_ext: APIRouter = APIRouter(prefix="/example", tags=["example"])
+inventory_ext: APIRouter = APIRouter(prefix="/inventory", tags=["inventory"])
 inventory_ext.include_router(inventory_ext_generic)
 inventory_ext.include_router(inventory_ext_api)
 

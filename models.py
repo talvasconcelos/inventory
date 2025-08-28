@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 
 
 class CreateInventory(BaseModel):
-    wallet: str
     name: str
     currency: str
     global_discount_percentage: float = 0.0
@@ -13,10 +12,14 @@ class CreateInventory(BaseModel):
     is_tax_inclusive: bool = True
 
 
-class Inventory(CreateInventory):
+class PublicInventory(CreateInventory):
     id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Inventory(PublicInventory):
+    user_id: str
 
 
 class CreateCategory(BaseModel):
@@ -33,7 +36,7 @@ class Category(CreateCategory):
 
 class CreateItem(BaseModel):
     inventory_id: str
-    category_id: str | None = None
+    categories: list[Category] | None = None
     name: str
     description: str | None = None
     sku: str
@@ -44,6 +47,8 @@ class CreateItem(BaseModel):
     reorder_threshold: int | None = None
     unit_cost: float | None = None
     external_id: str | None = None
+    omit_from_extension: list[str] | None = None
+    internal_note: str | None = None
 
 
 class Item(CreateItem):

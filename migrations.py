@@ -12,7 +12,7 @@ async def m001_initial(db: Database):
         f"""
        CREATE TABLE inventory.inventories (
            id TEXT PRIMARY KEY,
-           wallet TEXT NOT NULL,
+           user_id TEXT NOT NULL,
            name TEXT NOT NULL,
            currency TEXT NOT NULL,
            global_discount_percentage REAL DEFAULT 0.00,
@@ -55,7 +55,7 @@ async def m001_initial(db: Database):
        CREATE TABLE inventory.items (
            id TEXT PRIMARY KEY,
            inventory_id TEXT NOT NULL,
-           category_id TEXT,
+           categories TEXT,
            name TEXT NOT NULL,
            description TEXT,
            sku TEXT NOT NULL,
@@ -67,6 +67,8 @@ async def m001_initial(db: Database):
            unit_cost REAL,
            external_id TEXT,
            is_active BOOLEAN DEFAULT TRUE,
+           omit_from_extension TEXT,
+           internal_note TEXT,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );

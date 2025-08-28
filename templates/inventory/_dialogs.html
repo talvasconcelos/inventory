@@ -1,0 +1,85 @@
+<q-dialog
+  v-model="inventoryDialog.show"
+  position="top"
+  @hide="closeInventoryDialog"
+>
+  <q-card class="q-pa-lg q-pt-xl" style="width: 500px">
+    <q-form @submit="submitInventoryData" class="q-gutter-md">
+      <q-input
+        filled
+        dense
+        v-model.trim="inventoryDialog.data.name"
+        label="Name *"
+      ></q-input>
+      <q-select
+        v-if="'{{LNBITS_DENOMINATION}}' == 'sats'"
+        filled
+        dense
+        emit-value
+        v-model="inventoryDialog.data.currency"
+        :options="currencyOptions"
+        label="Currency *"
+      ></q-select>
+      <q-input
+        filled
+        dense
+        type="number"
+        v-model.number="inventoryDialog.data.global_discount_percentage"
+        label="Global Discount Percentage (0-100 %)"
+        step="0.01"
+        min="0"
+        max="100"
+      >
+        <q-tooltip>
+          <span
+            v-text="'Apply a global discount to all items in this inventory. Enter a value between 0 and 100. Leave empty or set to 0 for no discount.'"
+          ></span>
+        </q-tooltip>
+      </q-input>
+      <q-input
+        filled
+        dense
+        type="number"
+        v-model.number="inventoryDialog.data.default_tax_rate"
+        label="Default Tax Rate (0-100 %)"
+        step="0.01"
+        min="0"
+        max="100"
+        hint="Apply a default tax rate to all items in this inventory."
+      >
+        <q-tooltip>
+          <span
+            v-text="'Apply a default tax rate to all items in this inventory. Enter a value between 0 and 100. Leave empty or set to 0 for no tax.'"
+          ></span>
+        </q-tooltip>
+      </q-input>
+      <q-toggle
+        v-model="inventoryDialog.data.is_tax_inclusive"
+        label="Tax Inclusive (Applies to all products)"
+      >
+        <q-tooltip>
+          <span v-text="'Whether the prices include tax or not.'"></span>
+        </q-tooltip>
+      </q-toggle>
+      <q-card-actions class="q-mt-lg" align="between">
+        <q-btn
+          v-if="inventoryDialog.data.id"
+          unelevated
+          color="primary"
+          type="submit"
+          :disable="createOrUpdateDisabled()"
+          >Update Inventory</q-btn
+        >
+        <q-btn
+          v-else
+          unelevated
+          color="primary"
+          :disable="createOrUpdateDisabled()"
+          type="submit"
+          >Create Inventory</q-btn
+        >
+        <q-btn v-close-popup flat color="grey" class="q-ml-auto">Cancel</q-btn>
+      </q-card-actions>
+    </q-form>
+  </q-card>
+</q-dialog>

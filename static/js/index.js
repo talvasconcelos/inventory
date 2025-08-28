@@ -10,77 +10,101 @@ window.app = Vue.createApp({
   // Declare models/variables
   data() {
     return {
-      protocol: window.location.protocol,
-      location: '//' + window.location.hostname,
-      thingDialog: {
+      currencyOptions: [],
+      inventories: [],
+      inventoryDialog: {
         show: false,
         data: {}
-      },
-      someBool: true,
-      splitterModel: 20,
-      exampleData: [],
-      tab: 'frameworks',
-      framworktab: 'fastapi',
-      usefultab: 'magicalg',
-      vettedData: '',
-      baseUrl: window.location.origin
+      }
     }
   },
   // Where functions live
   methods: {
-    exampleFunction(data) {
-      LNbits.api
-        .request(
-          'GET', // Type of request
-          '/example/api/v1/test/00000000', // URL of the endpoint
-          this.g.user.wallets[0].inkey, // Often endpoints require a key
+    showInventoryDialog() {
+      this.inventoryDialog.show = true
+      this.inventoryDialog.data.is_tax_inclusive =
+        this.inventoryDialog.data.is_tax_inclusive ?? true
+    },
+    closeInventoryDialog() {
+      this.inventoryDialog.show = false
+      this.inventoryDialog.data = {}
+    },
+    createOrUpdateDisabled() {
+      if (!this.inventoryDialog.show) return true
+      const data = this.inventoryDialog.data
+      return !data.name || !data.currency
+    },
+    async getInventories() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/inventory/api/v1/inventories?all_wallets=true',
+          this.g.user.wallets[0].inkey
+        )
+        this.inventories = [...data]
+        console.log('Fetched inventories:', this.inventories)
+      } catch (error) {
+        console.error('Error fetching inventories:', error)
+        LNbits.utils.notifyError(error)
+      }
+    },
+    submitInventoryData() {
+      if (this.inventoryDialog.data.id) {
+        this.updateInventory(this.inventoryDialog.data)
+      } else {
+        this.createInventory(this.inventoryDialog.data)
+      }
+    },
+    async createInventory(data) {
+      try {
+        const payload = {...data}
+        const {data: createdInventory} = await LNbits.api.request(
+          'POST',
+          '/inventory/api/v1/inventories',
+          null,
+          payload
+        )
+        this.inventories.push(mapObject(createdInventory))
+      } catch (error) {
+        console.error('Error creating inventory:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeInventoryDialog()
+      }
+    },
+    async updateInventory(data) {
+      try {
+        const {data: updatedInventory} = await LNbits.api.request(
+          'PUT',
+          `/inventory/api/v1/inventories/${data.id}`,
+          null,
           data
         )
-        .then(response => {
-          this.exampleData.push(mapObject(response.data)) // Often whats returned is mapped onto some model
-        })
-        // Error will be passed to the frontend
-        .catch(LNbits.utils.notifyApiError)
-    },
-    getVettedReadme() {
-      // This is a function that gets the vetted readme from the LNbits repo and converts it from makrdown to html.
-      LNbits.api
-        .request('GET', '/example/api/v1/vetted', this.g.user.wallets[0].inkey)
-        .then(response => {
-          this.vettedData = LNbits.utils.convertMarkdown(response.data)
-        })
-        .catch(LNbits.utils.notifyApiError)
-    },
-    async initWs() {
-      if (location.protocol !== 'http:') {
-        localUrl =
-          'wss://' +
-          document.domain +
-          ':' +
-          location.port +
-          '/api/v1/ws/32872r23g29'
-      } else {
-        localUrl =
-          'ws://' +
-          document.domain +
-          ':' +
-          location.port +
-          '/api/v1/ws/32872r23g29'
+        const index = this.inventories.findIndex(
+          inv => inv.id === updatedInventory.id
+        )
+        if (index !== -1) {
+          this.inventories.splice(index, 1, mapObject(updatedInventory))
+        }
+      } catch (error) {
+        console.error('Error updating inventory:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeInventoryDialog()
       }
-      this.ws = new WebSocket(localUrl)
-      this.ws.addEventListener('message', async ({data}) => {
-        const res = data.toString()
-        document.getElementById('text-to-change').innerHTML = res
-      })
-    },
-    sendThingDialog() {
-      console.log(this.thingDialog)
     }
   },
   // To run on startup
-  created() {
-    this.exampleFunction('lorum')
-    this.initWs()
-    this.getVettedReadme()
+  async created() {
+    await this.getInventories()
+    await LNbits.api
+      .request('GET', '/api/v1/currencies')
+      .then(({data}) => {
+        this.currencyOptions = ['sats', ...data]
+      })
+      .catch(error => {
+        console.error('Error fetching currencies:', error)
+        LNbits.utils.notifyError(error)
+      })
   }
 })
