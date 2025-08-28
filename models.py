@@ -3,6 +3,8 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from lnbits.db import FilterModel
+
 
 class CreateInventory(BaseModel):
     name: str
@@ -51,11 +53,34 @@ class CreateItem(BaseModel):
     internal_note: str | None = None
 
 
-class Item(CreateItem):
+class PublicItem(CreateItem):
     id: str
+    inventory_id: str
+    categories: list[Category] | None = None
+    name: str
+    description: str | None = None
+    sku: str
+    quantity_in_stock: int
+    price: float
+    discount_percentage: float = 0.0
+    tax_rate: float | None = None
+    omit_from_extension: list[str] | None = None
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Item(PublicItem):
+    external_id: str | None = None
+    internal_note: str | None = None
+    unit_cost: float | None = None
+    reorder_threshold: int | None = None
+
+
+class ItemFilters(FilterModel):
+    __search_fields__ = ["name", "sku", "is_active", "internal_note", "categories"]
+
+    __sort_fields__ = ["name", "created_at", "price", "quantity_in_stock"]
 
 
 class OrderStatus(str, Enum):

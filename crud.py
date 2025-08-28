@@ -1,9 +1,16 @@
 from datetime import datetime, timezone
 
-from lnbits.db import Database
+from lnbits.db import Database, Filters, Page
 from lnbits.helpers import urlsafe_short_hash
 
-from .models import CreateInventory, Inventory, PublicInventory
+from .models import (
+    CreateInventory,
+    Inventory,
+    Item,
+    ItemFilters,
+    PublicInventory,
+    PublicItem,
+)
 
 db = Database("ext_inventory")
 
@@ -65,4 +72,19 @@ async def delete_inventory(user_id: str, inventory_id: str) -> None:
         WHERE id = :inventory_id AND user_id = :user_id
         """,
         {"inventory_id": inventory_id, "user_id": user_id},
+    )
+
+
+async def get_inventory_items_paginated(
+    inventory_id: str, filters: Filters[ItemFilters] | None
+) -> Page[Item]:
+    where = ["inventory_id = :inventory_id"]
+    params = {"inventory_id": inventory_id}
+
+    return await db.fetch_page(
+        "SELECT * FROM inventory.items",
+        where=where,
+        values=params,
+        filters=filters,
+        model=Item,
     )
