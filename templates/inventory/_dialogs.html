@@ -101,7 +101,8 @@
     </q-bar>
     <q-form
       @submit="addItem"
-      class="q-pa-md q-col-gutter-md q-mx-auto"
+      class="q-pa-md q-col-gutter-md"
+      :class="{'q-mx-auto': $q.screen.gt.sm}"
       style="max-width: 1024px"
     >
       <separator-text text="Identify"></separator-text>

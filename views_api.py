@@ -113,3 +113,12 @@ async def api_get_items(
     return Page(
         data=[PublicItem(**item.dict()) for item in page.data], total=page.total
     )
+
+
+@inventory_ext_api.post("/api/v1/items", status_code=HTTPStatus.CREATED)
+async def api_create_item(
+    item: CreateItem,
+    user: User = Depends(check_user_exists),
+) -> Item | None:
+    pass
+    # return await create_item(user.id, item)
