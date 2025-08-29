@@ -41,6 +41,7 @@ class CreateItem(BaseModel):
     categories: list[Category] | None = None
     name: str
     description: str | None = None
+    image: str | None = None
     sku: str
     quantity_in_stock: int
     price: float
@@ -59,6 +60,7 @@ class PublicItem(CreateItem):
     categories: list[Category] | None = None
     name: str
     description: str | None = None
+    image: str | None = None
     sku: str
     quantity_in_stock: int
     price: float

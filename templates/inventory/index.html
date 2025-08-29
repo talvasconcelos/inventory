@@ -13,47 +13,40 @@
       <q-list>
         <template v-for="(inventory, index) in inventories" :key="inventory.id">
           <q-expansion-item
+            group="items"
             expand-icon-toggle
             expand-separator
             icon="inventory"
             :label="inventory.name"
             :caption="inventory.currency"
             header-class="q-py-md"
+            @show="setOpenInventory(inventory.id)"
           >
             <q-card>
               <q-card-section>
                 <q-table
                   flat
                   bordered
-                  title="Treats"
-                  :rows="rows"
-                  :columns="columns"
+                  title="Items"
+                  :rows="items"
+                  :columns="itemsTable.columns"
                   row-key="id"
-                  :filter="filter"
-                  :loading="loading"
+                  v-model:pagination="itemsTable.pagination"
+                  @request="getItemsPaginated"
                 >
                   <template v-slot:top>
                     <q-btn
                       color="primary"
-                      :disable="loading"
                       label="Add row"
-                      @click="addRow"
-                    />
-                    <q-btn
-                      v-if="rows.length !== 0"
-                      class="q-ml-sm"
-                      color="primary"
-                      :disable="loading"
-                      label="Remove row"
-                      @click="removeRow"
-                    />
-                    <q-space />
+                      @click="itemDialog.show = true"
+                    ></q-btn>
+                    <q-space></q-space>
                     <q-input
-                      borderless
+                      standout
                       dense
                       debounce="300"
                       color="primary"
-                      v-model="filter"
+                      v-model="itemsTable.search"
                     >
                       <template v-slot:append>
                         <q-icon name="search" />

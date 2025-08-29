@@ -83,3 +83,182 @@
     </q-form>
   </q-card>
 </q-dialog>
+
+<q-dialog
+  v-model="itemDialog.show"
+  persistent
+  maximized
+  transition-show="slide-up"
+  transition-hide="slide-down"
+>
+  <q-card class="">
+    <q-bar class="q-mb-md">
+      <span v-text="itemDialog.data.id ? 'Edit Item' : 'Create Item'"></span>
+      <q-space></q-space>
+      <q-btn dense flat icon="close" v-close-popup>
+        <q-tooltip class="bg-white text-primary">Close</q-tooltip>
+      </q-btn>
+    </q-bar>
+    <q-form
+      @submit="addItem"
+      class="q-pa-md q-col-gutter-md q-mx-auto"
+      style="max-width: 1024px"
+    >
+      <separator-text text="Identify"></separator-text>
+      <div class="row q-col-gutter-md">
+        <div class="col-12 col-sm-6">
+          <q-input
+            filled
+            v-model.trim="itemDialog.data.name"
+            label="Name *"
+            placeholder="Item Name (must be unique)"
+          ></q-input>
+        </div>
+        <div class="col-12 col-sm-6">
+          <q-input
+            filled
+            v-model.trim="itemDialog.data.description"
+            label="Description"
+            autogrow
+            placeholder="Detailed description of the item"
+          ></q-input>
+        </div>
+        <div class="col-12 col-md-6">
+          <!-- TODO: add categories -->
+          <!-- <q-select
+        label="Mode: 'add-unique'"
+        filled
+        v-model="modelAddUnique"
+        use-input
+        use-chips
+        multiple
+        hide-dropdown-icon
+        input-debounce="0"
+        new-value-mode="add-unique"
+        style="width: 250px"
+      ></q-select> -->
+        </div>
+        <div class="col-12 col-md-6">
+          <q-input
+            filled
+            v-model.trim="itemDialog.data.image"
+            label="Image URL"
+            placeholder="URL of the item image"
+          ></q-input>
+        </div>
+      </div>
+      <separator-text text="Pricing"></separator-text>
+      <div class="row q-col-gutter-md">
+        <!-- <div class="col-12 text-subtitle1">Pricing</div> -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-input
+            filled
+            v-model.number="itemDialog.data.price"
+            min="0.00"
+            type="number"
+            label="Price *"
+            placeholder="How much you want to sell this item for."
+          ></q-input>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-input
+            filled
+            v-model.number="itemDialog.data.unit_cost"
+            min="0.00"
+            type="number"
+            label="Unit Cost *"
+            placeholder="Your cost per unit"
+          ></q-input>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-input
+            filled
+            v-model.number="itemDialog.data.discount"
+            label="Discount (0-100 %)"
+            step="0.01"
+            min="0"
+            max="100"
+            hint="Overrides the inventory's default discount."
+          ></q-input>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-input
+            filled
+            v-model.number="itemDialog.data.tax_rate"
+            label="Tax Rate (0-100 %)"
+            step="0.01"
+            min="0"
+            max="100"
+            hint="Overrides the inventory's default tax rate."
+          ></q-input>
+        </div>
+      </div>
+      <separator-text text="Inventory"></separator-text>
+      <div class="row q-col-gutter-md">
+        <!-- <div class="col-12 text-subtitle1">Inventory</div> -->
+        <div class="col-12 col-sm-4">
+          <q-input
+            filled
+            v-model.trim="itemDialog.data.sku"
+            label="SKU"
+            placeholder="Stock Keeping Unit"
+          ></q-input>
+        </div>
+        <div class="col-12 col-sm-4">
+          <q-input
+            filled
+            v-model.number="itemDialog.data.stock_quantity"
+            min="0"
+            type="number"
+            label="Stock Quantity"
+            placeholder="How many items you have in stock."
+          ></q-input>
+        </div>
+        <div class="col-12 col-sm-4">
+          <q-input
+            filled
+            v-model.number="itemDialog.data.reorder_threshold"
+            type="number"
+            min="0"
+            label="Reorder Threshold"
+            hint="The minimum stock level before reordering."
+          ></q-input>
+        </div>
+      </div>
+
+      <q-input
+        filled
+        v-model.trim="itemDialog.data.external_id"
+        label="External ID"
+        hint="External reference"
+      ></q-input>
+      <q-input
+        filled
+        v-model.trim="itemDialog.data.internal_note"
+        label="Internal Note"
+        hint="Internal note for this item"
+      ></q-input>
+      <q-select
+        filled
+        multiple
+        :options="g.user.extensions"
+        v-model="itemDialog.data.omit_from_extension"
+        label="Omit From Extensions"
+        hint="Select extensions to omit this item from"
+      >
+      </q-select>
+      <q-toggle
+        v-if="itemDialog.data.id"
+        v-model="itemDialog.data.is_active"
+        label="Is Active"
+      ></q-toggle>
+
+      <div class="row q-mt-lg">
+        <q-btn unelevated color="primary" type="submit">
+          <span> Add Item</span></q-btn
+        >
+        <q-btn v-close-popup flat color="grey" class="q-ml-auto">Cancel</q-btn>
+      </div>
+    </q-form>
+  </q-card>
+</q-dialog>

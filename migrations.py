@@ -58,6 +58,7 @@ async def m001_initial(db: Database):
            categories TEXT,
            name TEXT NOT NULL,
            description TEXT,
+           image TEXT,
            sku TEXT NOT NULL,
            quantity_in_stock INTEGER NOT NULL CHECK (quantity_in_stock >= 0),
            price REAL NOT NULL,
