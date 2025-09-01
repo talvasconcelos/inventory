@@ -15,15 +15,23 @@ from lnbits.decorators import (
 from lnbits.helpers import generate_filter_params_openapi
 
 from .crud import (
+    create_category,
     create_inventory,
+    create_item,
     delete_inventory,
     get_inventories,
     get_inventory,
+    get_inventory_categories,
     get_inventory_items_paginated,
+    get_item,
     get_public_inventory,
+    is_category_unique,
     update_inventory,
+    update_item,
 )
 from .models import (
+    Category,
+    CreateCategory,
     CreateInventory,
     CreateItem,
     Inventory,
@@ -106,6 +114,7 @@ async def api_get_items(
             status_code=HTTPStatus.NOT_FOUND,
             detail="Inventory not found.",
         )
+    print(f"API: {filters}")
     page = await get_inventory_items_paginated(inventory_id, filters)
 
     if user_id and inventory.dict().get("user_id", None) == user_id:
@@ -120,5 +129,73 @@ async def api_create_item(
     item: CreateItem,
     user: User = Depends(check_user_exists),
 ) -> Item | None:
-    pass
-    # return await create_item(user.id, item)
+    inventory = await get_inventory(user.id, item.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot create item.",
+        )
+    if item.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Item does not belong to the specified inventory.",
+        )
+    return await create_item(user.id, item)
+
+
+@inventory_ext_api.put("/api/v1/items/{item_id}", status_code=HTTPStatus.OK)
+async def api_update_item(
+    item_id: str,
+    item: CreateItem,
+    user: User = Depends(check_user_exists),
+) -> Item | None:
+    inventory = await get_inventory(user.id, item.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot update item.",
+        )
+    _item = await get_item(item_id)
+    if not _item or _item.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Item not found.",
+        )
+    for field, value in item.dict().items():
+        setattr(_item, field, value)
+    return await update_item(_item)
+
+
+## CATEGORIES
+@inventory_ext_api.get("/api/v1/categories/{inventory_id}", status_code=HTTPStatus.OK)
+async def api_get_categories(
+    inventory_id: str,
+) -> list[Category]:
+    inventory = await get_public_inventory(inventory_id)
+    if not inventory:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Inventory not found.",
+        )
+
+    return await get_inventory_categories(inventory_id)
+
+
+@inventory_ext_api.post("/api/v1/categories", status_code=HTTPStatus.CREATED)
+async def api_create_category(
+    category: CreateCategory,
+    user: User = Depends(check_user_exists),
+) -> Category:
+    inventory = await get_inventory(user.id, category.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot create category.",
+        )
+    if not await is_category_unique(category.name, category.inventory_id):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Category name must be unique.",
+        )
+
+    return await create_category(category)

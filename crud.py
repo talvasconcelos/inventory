@@ -4,7 +4,10 @@ from lnbits.db import Database, Filters, Page
 from lnbits.helpers import urlsafe_short_hash
 
 from .models import (
+    Category,
+    CreateCategory,
     CreateInventory,
+    CreateItem,
     Inventory,
     Item,
     ItemFilters,
@@ -75,11 +78,46 @@ async def delete_inventory(user_id: str, inventory_id: str) -> None:
     )
 
 
+async def get_inventory_categories(inventory_id: str) -> list[Category]:
+    return await db.fetchall(
+        """
+        SELECT * FROM inventory.categories
+        WHERE inventory_id = :inventory_id
+        """,
+        {"inventory_id": inventory_id},
+        model=Category,
+    )
+
+
+async def create_category(data: CreateCategory) -> Category:
+    category_id = urlsafe_short_hash()
+    category = Category(
+        id=category_id,
+        **data.dict(),
+    )
+    await db.insert("inventory.categories", category)
+    return category
+
+
+async def is_category_unique(name: str, inventory_id: str) -> bool:
+    existing_category = await db.fetchone(
+        """
+        SELECT * FROM inventory.categories
+        WHERE name = :name AND inventory_id = :inventory_id
+        """,
+        {"name": name, "inventory_id": inventory_id},
+        model=Category,
+    )
+    return existing_category is None
+
+
 async def get_inventory_items_paginated(
-    inventory_id: str, filters: Filters[ItemFilters] | None
+    inventory_id: str, filters: Filters[ItemFilters] | None = None
 ) -> Page[Item]:
     where = ["inventory_id = :inventory_id"]
     params = {"inventory_id": inventory_id}
+
+    print("Fetching items with filters:", filters)
 
     return await db.fetch_page(
         "SELECT * FROM inventory.items",
@@ -88,3 +126,30 @@ async def get_inventory_items_paginated(
         filters=filters,
         model=Item,
     )
+
+
+async def get_item(item_id: str) -> Item | None:
+    return await db.fetchone(
+        """
+        SELECT * FROM inventory.items
+        WHERE id = :item_id
+        """,
+        {"item_id": item_id},
+        model=Item,
+    )
+
+
+async def create_item(user_id: str, data: CreateItem) -> Item:
+    item_id = urlsafe_short_hash()
+    item = Item(
+        id=item_id,
+        **data.dict(),
+    )
+    await db.insert("inventory.items", item)
+    return item
+
+
+async def update_item(data: Item) -> Item:
+    data.updated_at = datetime.now(timezone.utc)
+    await db.update("inventory.items", data)
+    return data

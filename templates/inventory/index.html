@@ -33,11 +33,12 @@
                   row-key="id"
                   v-model:pagination="itemsTable.pagination"
                   @request="getItemsPaginated"
+                  :loading="loadingItems"
                 >
                   <template v-slot:top>
                     <q-btn
                       color="primary"
-                      label="Add row"
+                      label="Add Item"
                       @click="itemDialog.show = true"
                     ></q-btn>
                     <q-space></q-space>

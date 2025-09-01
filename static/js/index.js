@@ -18,6 +18,7 @@ window.app = Vue.createApp({
         data: {}
       },
       openInventory: null,
+      openInventoryCurrency: null,
       itemDialog: {
         show: false,
         data: {}
@@ -54,7 +55,7 @@ window.app = Vue.createApp({
             field: 'price',
             sortable: true,
             format: (_, row) =>
-              LNbits.utils.formatCurrency(row.price, row.currency)
+              LNbits.utils.formatCurrency(row.price, this.openInventoryCurrency)
           },
           {
             name: 'discount',
@@ -62,7 +63,7 @@ window.app = Vue.createApp({
             label: 'Discount',
             field: 'discount_percentage',
             sortable: true,
-            format: val => `${val}%`
+            format: val => (val ? `${val}%` : '')
           },
           {
             name: 'quantity_in_stock',
@@ -77,7 +78,7 @@ window.app = Vue.createApp({
             label: 'Categories',
             field: 'categories',
             sortable: true,
-            format: val => val.toString()
+            format: val => (val ? val.toString() : '')
           },
           {
             name: 'created_at',
@@ -101,7 +102,9 @@ window.app = Vue.createApp({
           rowsNumber: 10
         },
         search: ''
-      }
+      },
+      loadingItems: false,
+      categories: []
     }
   },
   watch: {
@@ -188,9 +191,15 @@ window.app = Vue.createApp({
     async setOpenInventory(id) {
       console.log('Fetching items for inventory:', id)
       this.openInventory = id
-      this.getItemsPaginated()
+      this.openInventoryCurrency =
+        this.inventories.find(inv => inv.id === id)?.currency || null
+      this.categories = []
+      console.log('Open inventory currency:', this.openInventoryCurrency)
+      await this.getItemsPaginated()
+      await this.getCategories()
     },
     async getItemsPaginated(props) {
+      this.loadingItems = true
       try {
         const params = LNbits.utils.prepareFilterQuery(this.itemsTable, props)
         const {data} = await LNbits.api.request(
@@ -204,9 +213,45 @@ window.app = Vue.createApp({
       } catch (error) {
         console.error('Error fetching items:', error)
         LNbits.utils.notifyError(error)
+      } finally {
+        this.loadingItems = false
       }
     },
-    addItem() {}
+    async getCategories() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          `/inventory/api/v1/categories/${this.openInventory}`
+        )
+        console.log('Fetched categories:', data)
+        this.categories = [...data]
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        LNbits.utils.notifyError(error)
+      }
+    },
+    createNewCategory(val, done) {
+      if (val.length === 0) return
+    },
+    async addItem() {
+      this.itemDialog.data.inventory_id = this.openInventory
+      try {
+        const {data} = await LNbits.api.request(
+          'POST',
+          `/inventory/api/v1/items`,
+          null,
+          this.itemDialog.data
+        )
+        console.log('Item added:', data)
+        this.items = [...this.items, data]
+      } catch (error) {
+        console.error('Error adding item:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.itemDialog.show = false
+        this.itemDialog.data = {}
+      }
+    }
   },
   // To run on startup
   async created() {

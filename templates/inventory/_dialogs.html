@@ -112,7 +112,7 @@
             filled
             v-model.trim="itemDialog.data.name"
             label="Name *"
-            placeholder="Item Name (must be unique)"
+            placeholder="Item Name"
           ></q-input>
         </div>
         <div class="col-12 col-sm-6">
@@ -156,6 +156,7 @@
             filled
             v-model.number="itemDialog.data.price"
             min="0.00"
+            step="0.01"
             type="number"
             label="Price *"
             placeholder="How much you want to sell this item for."
@@ -166,6 +167,7 @@
             filled
             v-model.number="itemDialog.data.unit_cost"
             min="0.00"
+            step="0.01"
             type="number"
             label="Unit Cost *"
             placeholder="Your cost per unit"
