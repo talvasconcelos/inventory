@@ -58,7 +58,7 @@ async def m001_initial(db: Database):
            categories TEXT,
            name TEXT NOT NULL,
            description TEXT,
-           image TEXT,
+           images TEXT,
            sku TEXT,
            quantity_in_stock INTEGER CHECK (quantity_in_stock IS NULL OR quantity_in_stock >= 0),
            price REAL NOT NULL,
@@ -70,6 +70,7 @@ async def m001_initial(db: Database):
            is_active BOOLEAN DEFAULT TRUE,
            omit_from_extension TEXT,
            internal_note TEXT,
+           manager_id TEXT,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );
