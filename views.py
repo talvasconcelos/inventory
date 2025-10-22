@@ -1,9 +1,14 @@
+from http import HTTPStatus
+
 from fastapi import APIRouter, Depends, Request
+from fastapi.exceptions import HTTPException
 from fastapi.responses import HTMLResponse
 
 from lnbits.core.models import User
 from lnbits.decorators import check_user_exists
 from lnbits.helpers import template_renderer
+
+from .crud import get_manager
 
 inventory_ext_generic = APIRouter(tags=["inventory"])
 
@@ -19,4 +24,19 @@ async def index(
 ):
     return inventory_renderer().TemplateResponse(
         request, "inventory/index.html", {"user": user.json()}
+    )
+
+
+@inventory_ext_generic.get("/manager", response_class=HTMLResponse)
+async def manager(
+    request: Request,
+    manager_id: str,
+):
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Manager not found"
+        )
+    return inventory_renderer().TemplateResponse(
+        request, "inventory/manager.html", {"manager": manager.json()}
     )

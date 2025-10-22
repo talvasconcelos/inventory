@@ -52,6 +52,8 @@ class CreateItem(BaseModel):
     external_id: str | None = None
     omit_from_extension: list[str] = Field(default_factory=list)
     internal_note: str | None = None
+    images: list[str] = Field(default_factory=list)
+    manager_id: str | None = None
 
 
 class PublicItem(CreateItem):
@@ -74,6 +76,7 @@ class PublicItem(CreateItem):
 
 class Item(PublicItem):
     external_id: str | None = None
+    manager_id: str | None = None
     internal_note: str | None = None
     unit_cost: float | None = None
     reorder_threshold: int | None = None
@@ -123,5 +126,17 @@ class CreateOrderItem(BaseModel):
 
 class OrderItem(BaseModel):
     id: int
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# Inventory owner can assign managers to help manage items and stock
+class CreateManager(BaseModel):
+    inventory_id: str
+    name: str | None = None
+
+
+class Manager(CreateManager):
+    id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

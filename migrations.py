@@ -114,3 +114,19 @@ async def m001_initial(db: Database):
        );
    """
     )
+
+    """
+    -- Table: Managers
+    -- Purpose: Stores managers assigned to specific inventories for better item and stock management.
+    """
+    await db.execute(
+        f"""
+       CREATE TABLE inventory.managers (
+           id TEXT PRIMARY KEY,
+           inventory_id TEXT NOT NULL,
+           name TEXT,
+           created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+           updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+       );
+   """
+    )

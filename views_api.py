@@ -1,7 +1,6 @@
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
-from pytest import Item
 
 from lnbits.core.models import User, WalletTypeInfo
 from lnbits.db import Filters, Page
@@ -18,12 +17,16 @@ from .crud import (
     create_category,
     create_inventory,
     create_item,
+    create_manager,
     delete_inventory,
+    delete_item,
+    delete_manager,
     get_inventories,
     get_inventory,
     get_inventory_categories,
     get_inventory_items_paginated,
     get_item,
+    get_manager,
     get_public_inventory,
     is_category_unique,
     update_inventory,
@@ -34,9 +37,11 @@ from .models import (
     CreateCategory,
     CreateInventory,
     CreateItem,
+    CreateManager,
     Inventory,
     Item,
     ItemFilters,
+    Manager,
     PublicItem,
 )
 
@@ -140,7 +145,7 @@ async def api_create_item(
             status_code=HTTPStatus.BAD_REQUEST,
             detail="Item does not belong to the specified inventory.",
         )
-    return await create_item(user.id, item)
+    return await create_item(item)
 
 
 @inventory_ext_api.put("/api/v1/items/{item_id}", status_code=HTTPStatus.OK)
@@ -199,3 +204,183 @@ async def api_create_category(
         )
 
     return await create_category(category)
+
+
+## MANAGERS
+@inventory_ext_api.post(
+    "/api/v1/managers/{inventory_id}", status_code=HTTPStatus.CREATED
+)
+async def api_create_manager(
+    manager: CreateManager,
+    user: User = Depends(check_user_exists),
+) -> Manager | None:
+    inventory = await get_inventory(user.id, manager.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot create manager.",
+        )
+    return await create_manager(manager)
+
+
+@inventory_ext_api.get("/api/v1/managers/{manager_id}", status_code=HTTPStatus.OK)
+async def api_get_manager(
+    manager_id: str,
+    user: User = Depends(check_user_exists),
+) -> Manager | None:
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Manager not found.",
+        )
+    inventory = await get_inventory(user.id, manager.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot access manager.",
+        )
+    return manager
+
+
+@inventory_ext_api.delete(
+    "/api/v1/managers/{manager_id}", status_code=HTTPStatus.NO_CONTENT
+)
+async def api_delete_manager(
+    manager_id: str,
+    user: User = Depends(check_user_exists),
+) -> None:
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Manager not found.",
+        )
+    inventory = await get_inventory(user.id, manager.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot delete manager.",
+        )
+    await delete_manager(manager_id)
+
+
+@inventory_ext_api.post(
+    "/api/v1/managers/{manager_id}/item", status_code=HTTPStatus.CREATED
+)
+async def api_manager_create_item(
+    item: CreateItem,
+    manager_id: str,
+) -> Item | None:
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Manager not found.",
+        )
+    inventory = await get_public_inventory(manager.inventory_id)
+    if not inventory:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot create item.",
+        )
+    if manager.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Manager does not belong to the specified inventory.",
+        )
+    if item.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Item does not belong to the specified inventory.",
+        )
+    item.manager_id = manager.id
+    return await create_item(item)
+
+
+@inventory_ext_api.put(
+    "/api/v1/managers/{manager_id}/item/{item_id}", status_code=HTTPStatus.OK
+)
+async def api_manager_update_item(
+    item_id: str,
+    data: Item,
+    manager_id: str,
+) -> Item | None:
+    item = await get_item(item_id)
+    if not item or item.id != item_id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Item not found.",
+        )
+    if item.manager_id != manager_id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Item is not managed by the specified manager.",
+        )
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Manager not found.",
+        )
+    inventory = await get_public_inventory(manager.inventory_id)
+    if not inventory:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot update item.",
+        )
+    if manager.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Manager does not belong to the specified inventory.",
+        )
+    if data.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Item does not belong to the specified inventory.",
+        )
+    data.is_active = False
+    return await update_item(data)
+
+
+@inventory_ext_api.delete(
+    "/api/v1/managers/{manager_id}/item/{item_id}", status_code=HTTPStatus.NO_CONTENT
+)
+async def api_manager_delete_item(
+    item_id: str,
+    manager_id: str,
+) -> None:
+    item = await get_item(item_id)
+    if not item or item.id != item_id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Item not found.",
+        )
+    if item.manager_id != manager_id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Item is not managed by the specified manager.",
+        )
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Manager not found.",
+        )
+    inventory = await get_public_inventory(manager.inventory_id)
+    if not inventory:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot delete item.",
+        )
+    if manager.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Manager does not belong to the specified inventory.",
+        )
+    if item.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Item does not belong to the specified inventory.",
+        )
+    await delete_item(item_id)

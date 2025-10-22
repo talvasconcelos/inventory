@@ -8,9 +8,11 @@ from .models import (
     CreateCategory,
     CreateInventory,
     CreateItem,
+    CreateManager,
     Inventory,
     Item,
     ItemFilters,
+    Manager,
     PublicInventory,
     PublicItem,
 )
@@ -139,12 +141,14 @@ async def get_item(item_id: str) -> Item | None:
     )
 
 
-async def create_item(user_id: str, data: CreateItem) -> Item:
+async def create_item(data: CreateItem) -> Item:
     item_id = urlsafe_short_hash()
     item = Item(
         id=item_id,
         **data.dict(),
     )
+    if item.manager_id is not None and item.manager_id != "":
+        item.is_active = False  # Items created by managers are inactive by default
     await db.insert("inventory.items", item)
     return item
 
@@ -153,3 +157,44 @@ async def update_item(data: Item) -> Item:
     data.updated_at = datetime.now(timezone.utc)
     await db.update("inventory.items", data)
     return data
+
+
+async def delete_item(item_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.items
+        WHERE id = :item_id
+        """,
+        {"item_id": item_id},
+    )
+
+
+async def create_manager(data: CreateManager) -> Manager:
+    manager_id = urlsafe_short_hash()
+    manager = Manager(
+        id=manager_id,
+        **data.dict(),
+    )
+    await db.insert("inventory.managers", manager)
+    return manager
+
+
+async def get_manager(manager_id: str) -> Manager | None:
+    return await db.fetchone(
+        """
+        SELECT * FROM inventory.managers
+        WHERE id = :manager_id
+        """,
+        {"manager_id": manager_id},
+        model=Manager,
+    )
+
+
+async def delete_manager(manager_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.managers
+        WHERE id = :manager_id
+        """,
+        {"manager_id": manager_id},
+    )
