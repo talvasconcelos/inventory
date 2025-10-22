@@ -83,7 +83,7 @@ class Item(PublicItem):
 
 
 class ItemFilters(FilterModel):
-    __search_fields__ = ["name", "sku", "is_active", "internal_note"]
+    __search_fields__ = ["name", "sku", "is_active", "internal_note", "manager_id"]
 
     __sort_fields__ = ["name", "created_at", "price", "quantity_in_stock"]
 
@@ -91,6 +91,7 @@ class ItemFilters(FilterModel):
     sku: str | None = None
     is_active: bool | None = None
     internal_note: str | None = None
+    manager_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

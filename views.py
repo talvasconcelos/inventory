@@ -37,6 +37,7 @@ async def manager(
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="Manager not found"
         )
+
     return inventory_renderer().TemplateResponse(
         request, "inventory/manager.html", {"manager": manager.json()}
     )
