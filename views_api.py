@@ -27,6 +27,7 @@ from .crud import (
     get_inventory_items_paginated,
     get_item,
     get_manager,
+    get_managers,
     get_public_inventory,
     is_category_unique,
     update_inventory,
@@ -207,6 +208,26 @@ async def api_create_category(
 
 
 ## MANAGERS
+@inventory_ext_api.get("/api/v1/managers/{inventory_id}", status_code=HTTPStatus.OK)
+async def api_get_managers(
+    inventory_id: str,
+    user: User = Depends(check_user_exists),
+) -> list[Manager]:
+    inventory = await get_inventory(user.id, inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot access managers.",
+        )
+    if not inventory:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Inventory not found.",
+        )
+
+    return await get_managers(inventory_id)
+
+
 @inventory_ext_api.post(
     "/api/v1/managers/{inventory_id}", status_code=HTTPStatus.CREATED
 )

@@ -179,6 +179,23 @@ async def create_manager(data: CreateManager) -> Manager:
     return manager
 
 
+async def update_manager(data: Manager) -> Manager:
+    data.updated_at = datetime.now(timezone.utc)
+    await db.update("inventory.managers", data)
+    return data
+
+
+async def get_managers(inventory_id: str) -> list[Manager]:
+    return await db.fetchall(
+        """
+        SELECT * FROM inventory.managers
+        WHERE inventory_id = :inventory_id
+        """,
+        {"inventory_id": inventory_id},
+        model=Manager,
+    )
+
+
 async def get_manager(manager_id: str) -> Manager | None:
     return await db.fetchone(
         """

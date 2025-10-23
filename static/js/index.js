@@ -12,8 +12,13 @@ window.app = Vue.createApp({
     return {
       currencyOptions: [],
       inventories: [],
+      managers: [],
       items: [],
       inventoryDialog: {
+        show: false,
+        data: {}
+      },
+      managerDialog: {
         show: false,
         data: {}
       },
@@ -124,6 +129,10 @@ window.app = Vue.createApp({
       this.inventoryDialog.show = false
       this.inventoryDialog.data = {}
     },
+    closeManagerDialog() {
+      this.managerDialog.show = false
+      this.managerDialog.data = {}
+    },
     createOrUpdateDisabled() {
       if (!this.inventoryDialog.show) return true
       const data = this.inventoryDialog.data
@@ -197,6 +206,7 @@ window.app = Vue.createApp({
       console.log('Open inventory currency:', this.openInventoryCurrency)
       await this.getItemsPaginated()
       await this.getCategories()
+      await this.getManagers()
     },
     async getItemsPaginated(props) {
       this.loadingItems = true
@@ -251,7 +261,67 @@ window.app = Vue.createApp({
         this.itemDialog.show = false
         this.itemDialog.data = {}
       }
-    }
+    },
+    async getManagers() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          `/inventory/api/v1/managers/${this.openInventory}`
+        )
+        this.managers = [...data]
+      } catch (error) {
+        console.error('Error fetching managers:', error)
+        LNbits.utils.notifyError(error)
+      }
+    },
+    submitManagerData() { 
+      const inventoryId = this.openInventory
+      if (!inventoryId) {
+        LNbits.utils.notifyError('No inventory selected')
+        return
+      }
+      this.managerDialog.data.inventory_id = inventoryId
+      if (this.managerDialog.data.id) {
+        this.updateManager(this.managerDialog.data)
+      } else {
+        this.createManager(this.managerDialog.data)
+      }      
+    },
+    async createManager(data) {
+      try {
+        const payload = {...data}
+        const {data: createdManager} = await LNbits.api.request(
+          'POST',
+          `/inventory/api/v1/managers/${this.openInventory}`,
+          null,
+          payload
+        )
+        this.managers.push(mapObject(createdManager))
+      } catch (error) {
+        console.error('Error creating manager:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeManagerDialog()
+      }
+    },
+    async updateManager(data) {
+      try {
+        const {data: updatedManager} = await LNbits.api.request(
+          'PUT',
+          `/inventory/api/v1/managers/${data.id}`,
+          null,
+          payload
+        )
+        this.managers = this.managers.map(manager =>
+          manager.id === updatedManager.id ? mapObject(updatedManager) : manager
+        )
+      } catch (error) {
+        console.error('Error updating manager:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeManagerDialog()
+      }
+    },
   },
   // To run on startup
   async created() {

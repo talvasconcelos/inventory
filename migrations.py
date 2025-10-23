@@ -35,7 +35,7 @@ async def m001_initial(db: Database):
        CREATE TABLE inventory.categories (
            id TEXT PRIMARY KEY,
            inventory_id TEXT NOT NULL,
-           name TEXT NOT NULL,
+           name TEXT,
            description TEXT,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}

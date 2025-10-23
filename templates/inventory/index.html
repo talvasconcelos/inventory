@@ -41,6 +41,12 @@
                       label="Add Item"
                       @click="itemDialog.show = true"
                     ></q-btn>
+                    <q-btn
+                      color="primary"
+                      label="Add Manager"
+                      @click="managerDialog.show = true"
+                      class="q-ml-md"
+                    ></q-btn>
                     <q-space></q-space>
                     <q-input
                       standout
@@ -55,6 +61,28 @@
                     </q-input>
                   </template>
                 </q-table>
+              </q-card-section>
+              <q-card-section class="q-mt-lg" v-if="managers.length">
+                <h6 class="text-subtitle1 q-my-none">Managers</h6>
+                <q-list bordered>
+                  <q-item v-for="manager in managers" :key="manager.id">
+                    <q-item-section>
+                      <q-item-label v-text="manager.name"></q-item-label>
+                      <q-item-label
+                        caption
+                        v-text="manager.email || 'No email provided'"
+                      ></q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <!-- <q-item-label caption>2 min ago</q-item-label> -->
+                      <div class="">
+                        <q-icon name="star"></q-icon>
+                        <q-icon name="star"></q-icon>
+                        <q-icon name="star"></q-icon>
+                      </div>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
               </q-card-section>
             </q-card>
           </q-expansion-item>

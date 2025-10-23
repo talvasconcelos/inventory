@@ -134,7 +134,8 @@ class OrderItem(BaseModel):
 # Inventory owner can assign managers to help manage items and stock
 class CreateManager(BaseModel):
     inventory_id: str
-    name: str | None = None
+    name: str
+    email: str | None = None
 
 
 class Manager(CreateManager):
