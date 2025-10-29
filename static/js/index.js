@@ -1,6 +1,17 @@
 const mapObject = obj => {
-  // obj.date = Quasar.date.formatDate(new Date(obj.time), 'YYYY-MM-DD HH:mm')
-  // here you can do something with the mapped data
+  obj.price = Number(obj.price.toFixed(2))
+  if (obj.discount_percentage) {
+    obj.discount_percentage = Number(obj.discount_percentage.toFixed(2))
+  }
+  if (obj.discount_percentage) {
+    obj.discount_percentage = Number(obj.discount_percentage.toFixed(2))
+  }
+  if (obj.unit_cost) {
+    obj.unit_cost = Number(obj.unit_cost.toFixed(2))
+  }
+  if (obj.tax_rate) {
+    obj.tax_rate = Number(obj.tax_rate.toFixed(2))
+  }
   return obj
 }
 
@@ -76,6 +87,14 @@ window.app = Vue.createApp({
             label: 'Quantity',
             field: 'quantity_in_stock',
             sortable: true
+          },
+          {
+            name: 'tags',
+            align: 'left',
+            label: 'Tags',
+            field: 'tags',
+            sortable: true,
+            format: val => (val ? val.toString() : '')
           },
           {
             name: 'categories',
@@ -247,8 +266,7 @@ window.app = Vue.createApp({
           'GET',
           `/inventory/api/v1/items/${this.openInventory}/paginated?${params}`
         )
-        console.log('Received data:', data)
-        this.items = [...data.data]
+        this.items = data.data.map(item => mapObject(item))
         this.itemsTable.pagination.rowsNumber = data.total
         // console.log('Fetched items:', this.items)
       } catch (error) {
@@ -291,11 +309,11 @@ window.app = Vue.createApp({
       if (this.itemDialog.data.id) {
         this.updateItem(this.itemDialog.data)
       } else {
-        this.addItem(this.itemDialog.data)
+        this.addItem()
       }
     },
-    async addItem(data) {
-      data.inventory_id = this.openInventory
+    async addItem() {
+      this.itemDialog.data.inventory_id = this.openInventory
       try {
         const {data} = await LNbits.api.request(
           'POST',

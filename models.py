@@ -56,8 +56,20 @@ class CreateItem(BaseModel):
     manager_id: str | None = None
 
 
-class PublicItem(CreateItem):
+class PublicItem(BaseModel):
     id: str
+    inventory_id: str
+    categories: list[Category] = Field(default_factory=list)
+    name: str
+    description: str | None = None
+    images: list[str] = Field(default_factory=list)
+    sku: str | None = None
+    quantity_in_stock: int | None = None
+    price: float
+    discount_percentage: float | None
+    tax_rate: float | None
+    external_id: str | None = None
+    tags: list[str] = Field(default_factory=list)
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
