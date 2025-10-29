@@ -112,7 +112,7 @@
       </q-btn>
     </q-bar>
     <q-form
-      @submit="addItem"
+      @submit="submitItemData"
       class="q-pa-md q-col-gutter-md"
       :class="{'q-mx-auto': $q.screen.gt.sm}"
       style="max-width: 1024px"
@@ -275,10 +275,10 @@
           unelevated
           color="primary"
           type="submit"
+          :label="itemDialog.data.id ? 'Update Item' : 'Create Item'"
           :disable="!itemDialog.data.name || !itemDialog.data.price || itemDialog.data.unit_cost === null"
         >
-          <span> Add Item</span></q-btn
-        >
+        </q-btn>
       </q-card-actions>
     </q-form>
   </q-card>
