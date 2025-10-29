@@ -120,8 +120,14 @@ window.app = Vue.createApp({
     }
   },
   methods: {
-    showInventoryDialog() {
+    showInventoryDialog(id) {
       this.inventoryDialog.show = true
+      if (id) {
+        const inventory = this.inventories.find(inv => inv.id === id)
+        this.inventoryDialog.data = {...inventory}
+        return
+      }
+      this.inventoryDialog.data = {}
       this.inventoryDialog.data.is_tax_inclusive =
         this.inventoryDialog.data.is_tax_inclusive ?? true
     },
@@ -197,6 +203,31 @@ window.app = Vue.createApp({
         this.closeInventoryDialog()
       }
     },
+    async deleteInventory(id) {
+      this.$q
+        .dialog({
+          title: 'Confirm Deletion',
+          message: 'Are you sure you want to delete this inventory?',
+          cancel: true,
+          persistent: true
+        })
+        .onOk(async () => {
+          try {
+            await LNbits.api.request(
+              'DELETE',
+              `/inventory/api/v1/inventories/${id}`
+            )
+            this.inventories = this.inventories.filter(inv => inv.id !== id)
+            if (this.openInventory === id) {
+              this.openInventory = null
+              this.items = []
+            }
+          } catch (error) {
+            console.error('Error deleting inventory:', error)
+            LNbits.utils.notifyError(error)
+          }
+        })
+    },
     async setOpenInventory(id) {
       console.log('Fetching items for inventory:', id)
       this.openInventory = id
@@ -243,8 +274,28 @@ window.app = Vue.createApp({
     createNewCategory(val, done) {
       if (val.length === 0) return
     },
-    async addItem() {
-      this.itemDialog.data.inventory_id = this.openInventory
+    showItemDialog(id) {
+      this.itemDialog.show = true
+      if (id) {
+        const item = this.items.find(it => it.id === id)
+        this.itemDialog.data = {...item}
+        return
+      }
+      this.itemDialog.data = {}
+    },
+    closeItemDialog() {
+      this.itemDialog.show = false
+      this.itemDialog.data = {}
+    },
+    submitItemData() {
+      if (this.itemDialog.data.id) {
+        this.updateItem(this.itemDialog.data)
+      } else {
+        this.addItem(this.itemDialog.data)
+      }
+    },
+    async addItem(data) {
+      data.inventory_id = this.openInventory
       try {
         const {data} = await LNbits.api.request(
           'POST',
@@ -261,6 +312,42 @@ window.app = Vue.createApp({
         this.itemDialog.show = false
         this.itemDialog.data = {}
       }
+    },
+    async updateItem(data) {
+      try {
+        const {data: updatedItem} = await LNbits.api.request(
+          'PUT',
+          `/inventory/api/v1/items/${data.id}`,
+          null,
+          data
+        )
+        this.items = this.items.map(item =>
+          item.id === updatedItem.id ? mapObject(updatedItem) : item
+        )
+      } catch (error) {
+        console.error('Error updating item:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeItemDialog()
+      }
+    },
+    async deleteItem(id) {
+      this.$q
+        .dialog({
+          title: 'Confirm Deletion',
+          message: 'Are you sure you want to delete this item?',
+          cancel: true,
+          persistent: true
+        })
+        .onOk(async () => {
+          try {
+            await LNbits.api.request('DELETE', `/inventory/api/v1/items/${id}`)
+            this.items = this.items.filter(item => item.id !== id)
+          } catch (error) {
+            console.error('Error deleting item:', error)
+            LNbits.utils.notifyError(error)
+          }
+        })
     },
     async getManagers() {
       try {

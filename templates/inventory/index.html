@@ -27,13 +27,36 @@
                   <q-btn
                     color="primary"
                     label="Dashboard"
-                    :href="`/dashboard?inventory_id=${inventory.id}`"
+                    :href="`/inventory/dashboard/${inventory.id}`"
+                    target="_blank"
                   ></q-btn>
                   <q-btn
                     color="primary"
                     label="Add Manager"
                     @click="managerDialog.show = true"
                   ></q-btn>
+                  <div class="float-right q-gutter-x-sm">
+                    <q-btn
+                      flat
+                      dense
+                      icon="edit"
+                      color="cyan"
+                      @click="showInventoryDialog(inventory.id)"
+                    >
+                      <q-tooltip class="bg-white text-primary">Edit</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      dense
+                      icon="delete"
+                      color="red"
+                      @click="deleteInventory(inventory.id)"
+                    >
+                      <q-tooltip class="bg-white text-primary"
+                        >Delete</q-tooltip
+                      >
+                    </q-btn>
+                  </div>
                 </div>
               </q-card-section>
               <q-card-section>
@@ -66,6 +89,49 @@
                         <q-icon name="search" />
                       </template>
                     </q-input>
+                  </template>
+                  <template v-slot:header="props">
+                    <q-tr :props="props">
+                      <q-th auto-width></q-th>
+                      <q-th auto-width></q-th>
+                      <q-th
+                        v-for="col in props.cols"
+                        :key="col.name"
+                        :props="props"
+                        v-text="col.label"
+                      ></q-th>
+                    </q-tr>
+                  </template>
+                  <template v-slot:body="props">
+                    <q-tr :props="props">
+                      <q-td auto-width>
+                        <q-btn
+                          unlevated
+                          size="sm"
+                          color="pink"
+                          dense
+                          @click="deleteItem(props.row.id)"
+                          icon="delete"
+                        ></q-btn>
+                      </q-td>
+                      <q-td auto-width>
+                        <q-btn
+                          unlevated
+                          size="sm"
+                          color="accent"
+                          dense
+                          @click="showItemDialog(props.row.id)"
+                          icon="edit"
+                        ></q-btn>
+                      </q-td>
+                      <q-td
+                        v-for="col in props.cols"
+                        :key="col.name"
+                        :props="props"
+                        v-text="col.value"
+                      >
+                      </q-td>
+                    </q-tr>
                   </template>
                 </q-table>
               </q-card-section>

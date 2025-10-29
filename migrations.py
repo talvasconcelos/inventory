@@ -18,6 +18,7 @@ async def m001_initial(db: Database):
            global_discount_percentage REAL DEFAULT 0.00,
            default_tax_rate REAL DEFAULT 0.00,
            is_tax_inclusive BOOLEAN DEFAULT TRUE,
+           tags TEXT,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );
@@ -68,7 +69,7 @@ async def m001_initial(db: Database):
            unit_cost REAL,
            external_id TEXT,
            is_active BOOLEAN DEFAULT TRUE,
-           omit_from_extension TEXT,
+           tags TEXT,
            internal_note TEXT,
            manager_id TEXT,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},

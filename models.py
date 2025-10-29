@@ -12,6 +12,7 @@ class CreateInventory(BaseModel):
     global_discount_percentage: float = 0.0
     default_tax_rate: float = 0.0
     is_tax_inclusive: bool = True
+    tags: list[str] = Field(default_factory=list)
 
 
 class PublicInventory(CreateInventory):
@@ -50,25 +51,13 @@ class CreateItem(BaseModel):
     reorder_threshold: int | None = None
     unit_cost: float | None = None
     external_id: str | None = None
-    omit_from_extension: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     internal_note: str | None = None
-    images: list[str] = Field(default_factory=list)
     manager_id: str | None = None
 
 
 class PublicItem(CreateItem):
     id: str
-    inventory_id: str
-    categories: list[Category] = Field(default_factory=list)
-    name: str
-    description: str | None = None
-    images: list[str] = Field(default_factory=list)
-    sku: str | None = None
-    quantity_in_stock: int | None = None
-    price: float
-    discount_percentage: float | None = None
-    tax_rate: float | None = None
-    omit_from_extension: list[str] = Field(default_factory=list)
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -83,14 +72,24 @@ class Item(PublicItem):
 
 
 class ItemFilters(FilterModel):
-    __search_fields__ = ["name", "sku", "is_active", "internal_note", "manager_id"]
+    __search_fields__ = [
+        "name",
+        "description",
+        "sku",
+        "is_active",
+        "internal_note",
+        "manager_id",
+        "tags",
+    ]
 
-    __sort_fields__ = ["name", "created_at", "price", "quantity_in_stock"]
+    __sort_fields__ = ["name", "created_at", "price", "quantity_in_stock", "tags"]
 
     name: str | None = None
+    description: str | None = None
     sku: str | None = None
     is_active: bool | None = None
     internal_note: str | None = None
+    tags: str | None = None
     manager_id: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None

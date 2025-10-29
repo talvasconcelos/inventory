@@ -20,6 +20,18 @@
         :options="currencyOptions"
         label="Currency *"
       ></q-select>
+      <q-select
+        filled
+        dense
+        multiple
+        use-input
+        use-chips
+        hide-dropdown-icon
+        new-value-mode="add-unique"
+        v-model="inventoryDialog.data.tags"
+        label="Allowed Tags"
+        hint="Define tags available to this inventory (e.g., main, web, shop)"
+      ></q-select>
       <q-input
         filled
         dense
@@ -244,10 +256,11 @@
       <q-select
         filled
         multiple
-        :options="g.user.extensions"
-        v-model="itemDialog.data.omit_from_extension"
-        label="Omit From Extensions"
-        hint="Select extensions to omit this item from"
+        use-chips
+        :options="inventories.find(inv => inv.id === openInventory).tags"
+        v-model="itemDialog.data.tags"
+        label="Tags"
+        hint="Select tags for this item"
       >
       </q-select>
       <q-toggle
@@ -258,7 +271,12 @@
 
       <q-card-actions class="q-mt-lg" align="between">
         <q-btn v-close-popup flat color="grey">Cancel</q-btn>
-        <q-btn unelevated color="primary" type="submit">
+        <q-btn
+          unelevated
+          color="primary"
+          type="submit"
+          :disable="!itemDialog.data.name || !itemDialog.data.price || itemDialog.data.unit_cost === null"
+        >
           <span> Add Item</span></q-btn
         >
       </q-card-actions>

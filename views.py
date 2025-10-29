@@ -27,10 +27,10 @@ async def index(
     )
 
 
-@inventory_ext_generic.get("/dashboard", response_class=HTMLResponse)
+@inventory_ext_generic.get("/dashboard/{inventory_id}", response_class=HTMLResponse)
 async def dashboard(
     request: Request,
-    inventory_id: str = Query(...),
+    inventory_id: str,
     user: User = Depends(check_user_exists),
 ):
     if not inventory_id:
