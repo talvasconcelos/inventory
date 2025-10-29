@@ -274,7 +274,7 @@ window.app = Vue.createApp({
         LNbits.utils.notifyError(error)
       }
     },
-    submitManagerData() { 
+    submitManagerData() {
       const inventoryId = this.openInventory
       if (!inventoryId) {
         LNbits.utils.notifyError('No inventory selected')
@@ -285,7 +285,7 @@ window.app = Vue.createApp({
         this.updateManager(this.managerDialog.data)
       } else {
         this.createManager(this.managerDialog.data)
-      }      
+      }
     },
     async createManager(data) {
       try {
@@ -321,7 +321,7 @@ window.app = Vue.createApp({
       } finally {
         this.closeManagerDialog()
       }
-    },
+    }
   },
   // To run on startup
   async created() {

@@ -41,7 +41,7 @@ class CreateItem(BaseModel):
     categories: list[Category] = Field(default_factory=list)
     name: str
     description: str | None = None
-    image: str | None = None
+    images: list[str] = Field(default_factory=list)
     sku: str | None = None
     quantity_in_stock: int | None = None
     price: float
@@ -62,7 +62,7 @@ class PublicItem(CreateItem):
     categories: list[Category] = Field(default_factory=list)
     name: str
     description: str | None = None
-    image: str | None = None
+    images: list[str] = Field(default_factory=list)
     sku: str | None = None
     quantity_in_stock: int | None = None
     price: float

@@ -14,7 +14,6 @@
         <template v-for="(inventory, index) in inventories" :key="inventory.id">
           <q-expansion-item
             group="items"
-            expand-icon-toggle
             expand-separator
             icon="inventory"
             :label="inventory.name"
@@ -23,6 +22,20 @@
             @show="setOpenInventory(inventory.id)"
           >
             <q-card>
+              <q-card-section>
+                <div class="q-pa-md q-gutter-md">
+                  <q-btn
+                    color="primary"
+                    label="Dashboard"
+                    :href="`/dashboard?inventory_id=${inventory.id}`"
+                  ></q-btn>
+                  <q-btn
+                    color="primary"
+                    label="Add Manager"
+                    @click="managerDialog.show = true"
+                  ></q-btn>
+                </div>
+              </q-card-section>
               <q-card-section>
                 <q-table
                   flat
@@ -40,12 +53,6 @@
                       color="primary"
                       label="Add Item"
                       @click="itemDialog.show = true"
-                    ></q-btn>
-                    <q-btn
-                      color="primary"
-                      label="Add Manager"
-                      @click="managerDialog.show = true"
-                      class="q-ml-md"
                     ></q-btn>
                     <q-space></q-space>
                     <q-input
