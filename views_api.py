@@ -172,6 +172,26 @@ async def api_update_item(
     return await update_item(_item)
 
 
+@inventory_ext_api.delete("/api/v1/items/{item_id}", status_code=HTTPStatus.NO_CONTENT)
+async def api_delete_item(
+    item_id: str,
+    user: User = Depends(check_user_exists),
+) -> None:
+    item = await get_item(item_id)
+    if not item:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Item not found.",
+        )
+    inventory = await get_inventory(user.id, item.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot delete item.",
+        )
+    await delete_item(item_id)
+
+
 ## CATEGORIES
 @inventory_ext_api.get("/api/v1/categories/{inventory_id}", status_code=HTTPStatus.OK)
 async def api_get_categories(
