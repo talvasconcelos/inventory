@@ -1,73 +1,87 @@
 {% extends "public.html" %} {% block page %}
 <div class="justify-center">
-  <q-card class="bg-transparent no-shadow no-border">
-    <q-card-section class="row">
-      <div class="col-lg-12 col-sm-12 col-xs-12 col-md-12">
-        <!--          <div class="text-h6 float-left q-ml-md q-mt-sm">Pagination With Filters</div>-->
-        <q-space></q-space>
-        <q-select
-          dense
-          outlined
-          style="min-width: 200px"
-          v-model="type"
-          :options="['All','Free','Paid']"
-          class="float-right"
-          label="Category"
-        ></q-select>
-      </div>
-    </q-card-section>
-    <q-card-section class="q-mx-sm">
-      <div class="row q-col-gutter-lg">
-        <div
-          class="col-lg-3 col-sm-12 col-xs-12 col-md-3"
-          v-for="data in items"
-          :key="data.id"
-        >
-          <q-card style="background-color: #292845" class="text-white">
-            <q-img v-if="data.img" :src="data.img">
-              <template v-slot:loading>
-                <div class="text-subtitle1 text-white">Loading...</div>
-              </template>
-            </q-img>
-            <q-separator></q-separator>
-            <q-card-section class="text-h5 text-center">title</q-card-section>
-            <q-card-section class="text-justify">
-              <div>text</div>
-            </q-card-section>
-            <q-card-actions>
-              <q-btn
-                color
-                icon="remove_red_eye"
-                class="bg-transparent text-capitalize"
-                flat
-                label="200 Views"
-              ></q-btn>
-
-              <q-space></q-space>
-
-              <q-btn
-                color
-                icon="chat_bubble"
-                class="bg-transparent"
-                flat
-                label="56"
-              ></q-btn>
-            </q-card-actions>
-          </q-card>
-        </div>
-      </div>
-    </q-card-section>
-    <q-card-actions align="center">
-      <q-pagination
-        v-model="itemsTable.pagination.page"
-        :min="1"
-        :max="itemsTable.pagination.rowsNumber"
-        :input="true"
-        input-class="text-orange-10"
+  <!-- <q-card class="bg-transparent no-shadow no-border"> -->
+  <q-toolbar class="q-pb-lg">
+    <q-btn-toggle
+      v-model="tab"
+      flat
+      stretch
+      toggle-color="accent"
+      :options="tabOptions"
+    ></q-btn-toggle>
+    <q-space></q-space>
+    <q-select
+      dense
+      outlined
+      style="min-width: 200px"
+      v-model="type"
+      :options="['All','Free','Paid']"
+      class="float-right"
+      label="Category"
+    ></q-select>
+  </q-toolbar>
+  <div class="">
+    <div class="row q-col-gutter-md">
+      <div
+        class="col-12 col-sm-6 col-lg-4"
+        v-for="data in items"
+        :key="data.id"
       >
-      </q-pagination>
-    </q-card-actions>
-  </q-card>
+        <q-card class="item-card">
+          <q-card-section horizontal>
+            <q-img
+              class="col-5"
+              :src="data.img || 'https://cdn.quasar.dev/img/parallax1.jpg'"
+            ></q-img>
+
+            <q-card-section class="overflow-hidden">
+              <div class="text-h6 ellipsis q-pb-md" v-text="data.name"></div>
+              <div
+                class="text-subtitle1 ellipsis q-pb-md"
+                v-text="data.description || `&nbsp;`"
+              ></div>
+              <!-- <q-separator class="q-my-sm"></q-separator> -->
+              <div class="text-subtitle1 text-justify">
+                <div>
+                  <span>Price: </span>
+                  <span v-text="computePrice(data.price)"></span>
+                </div>
+              </div>
+            </q-card-section>
+          </q-card-section>
+
+          <q-separator></q-separator>
+
+          <q-card-actions>
+            <q-chip square>
+              <div v-if="data.quantity_in_stock">
+                <q-avatar
+                  :color="data.quantity_in_stock ? (data.quantity_in_stock <= data.reorder_threshold ? 'red' : 'green') : 'grey'"
+                  text-color="white"
+                >
+                  <span v-text="data.quantity_in_stock"></span>
+                </q-avatar>
+                Available In Stock
+              </div>
+            </q-chip>
+          </q-card-actions>
+        </q-card>
+      </div>
+    </div>
+  </div>
+  <q-card-actions align="center">
+    <q-pagination
+      v-model="itemsTable.pagination.page"
+      :min="1"
+      :max="itemsTable.pagination.rowsNumber"
+      :input="true"
+      input-class="text-accent"
+      @update:model-value="getItemsPaginated"
+      boundary-links
+    >
+    </q-pagination>
+  </q-card-actions>
+  <!-- </q-card> -->
 </div>
 {% endblock %} {% block scripts %}
 <script>
@@ -79,6 +93,12 @@
     mixins: [windowMixin],
     data() {
       return {
+        tab: 'items',
+        tabOptions: [
+          {label: 'Items', value: 'items'},
+          {label: 'Managers', value: 'managers'},
+          {label: 'Orders', value: 'orders'}
+        ],
         inventory: {},
         items: [],
         itemsTable: {
@@ -91,12 +111,17 @@
               align: 'left'
             },
             {name: 'price', label: 'Price', field: 'price', align: 'right'},
-            {name: 'stock', label: 'Stock', field: 'stock', align: 'right'}
+            {
+              name: 'quantity_in_stock',
+              label: 'Stock',
+              field: 'quantity_in_stock',
+              align: 'right'
+            }
           ],
           pagination: {
             page: 1,
-            rowsPerPage: 25,
-            rowsNumber: 0
+            rowsPerPage: 10,
+            rowsNumber: 10
           }
         }
       }
@@ -119,14 +144,18 @@
           )
           console.log('Received data:', data)
           this.items = [...data.data]
-          this.itemsTable.pagination.rowsNumber = data.total
-          // console.log('Fetched items:', this.items)
+          this.itemsTable.pagination.rowsNumber = data.total / this.items.length
         } catch (error) {
           console.error('Error fetching items:', error)
           LNbits.utils.notifyError(error)
         } finally {
           this.loadingItems = false
         }
+      },
+      computePrice(price) {
+        return price
+          ? LNbits.utils.formatCurrency(price, this.inventory.currency)
+          : 'Free'
       }
     }
   })
