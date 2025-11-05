@@ -3,12 +3,15 @@ from datetime import datetime, timezone
 from lnbits.db import Database, Filters, Page
 from lnbits.helpers import urlsafe_short_hash
 
+from .helpers import create_api_key
 from .models import (
     Category,
     CreateCategory,
+    CreateExternalService,
     CreateInventory,
     CreateItem,
     CreateManager,
+    ExternalService,
     Inventory,
     Item,
     ItemFilters,
@@ -215,3 +218,66 @@ async def delete_manager(manager_id: str) -> None:
         """,
         {"manager_id": manager_id},
     )
+
+
+async def create_external_service(data: CreateExternalService) -> ExternalService:
+    service_id = urlsafe_short_hash()
+    ext_service = ExternalService(
+        id=service_id,
+        api_key=create_api_key(),
+        **data.dict(),
+    )
+    await db.insert("inventory.external_services", ext_service)
+    return ext_service
+
+
+async def get_external_service(service_id: str) -> ExternalService | None:
+    return await db.fetchone(
+        """
+        SELECT * FROM inventory.external_services
+        WHERE id = :service_id
+        """,
+        {"service_id": service_id},
+        model=ExternalService,
+    )
+
+
+async def get_external_service_by_api_key(api_key: str) -> ExternalService | None:
+    return await db.fetchone(
+        """
+        SELECT * FROM inventory.external_services
+        WHERE api_key = :api_key
+        """,
+        {"api_key": api_key},
+        model=ExternalService,
+    )
+
+
+async def get_external_services() -> list[ExternalService]:
+    return await db.fetchall(
+        """
+        SELECT * FROM inventory.external_services
+        """,
+        model=ExternalService,
+    )
+
+
+async def delete_external_service(service_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.external_services
+        WHERE id = :service_id
+        """,
+        {"service_id": service_id},
+    )
+
+
+async def update_external_service(data: ExternalService) -> ExternalService:
+    data.last_used_at = datetime.now(timezone.utc)
+    await db.update("inventory.external_services", data)
+    return data
+
+
+## Log/Audit
+
+# async def create_external_service()

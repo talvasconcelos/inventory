@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from lnbits.core.models import User, WalletTypeInfo
 from lnbits.db import Filters, Page
@@ -15,12 +15,16 @@ from lnbits.helpers import generate_filter_params_openapi
 
 from .crud import (
     create_category,
+    create_external_service,
     create_inventory,
     create_item,
     create_manager,
+    delete_external_service,
     delete_inventory,
     delete_item,
     delete_manager,
+    get_external_service,
+    get_external_services,
     get_inventories,
     get_inventory,
     get_inventory_categories,
@@ -30,20 +34,24 @@ from .crud import (
     get_managers,
     get_public_inventory,
     is_category_unique,
+    update_external_service,
     update_inventory,
     update_item,
 )
 from .models import (
     Category,
     CreateCategory,
+    CreateExternalService,
     CreateInventory,
     CreateItem,
     CreateManager,
+    ExternalService,
     Inventory,
     Item,
     ItemFilters,
     Manager,
     PublicItem,
+    WebhookPayload,
 )
 
 inventory_ext_api = APIRouter()
@@ -425,3 +433,88 @@ async def api_manager_delete_item(
             detail="Item does not belong to the specified inventory.",
         )
     await delete_item(item_id)
+
+
+## external services
+@inventory_ext_api.post("/api/v1/services", status_code=HTTPStatus.CREATED)
+async def api_create_service(
+    data: CreateExternalService,
+    user: User = Depends(check_user_exists),
+):
+    inventory = await get_inventory(user.id, data.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot create external service.",
+        )
+    return await create_external_service(data)
+
+
+@inventory_ext_api.put("/api/v1/services/{service_id}", status_code=HTTPStatus.OK)
+async def api_update_service(
+    service_id: str,
+    data: ExternalService,
+    user: User = Depends(check_user_exists),
+):
+    service = await get_external_service(service_id)
+    if not service:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="External service not found.",
+        )
+    inventory = await get_inventory(user.id, service.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot update external service.",
+        )
+    for field, value in data.dict().items():
+        setattr(service, field, value)
+    return await update_external_service(service)
+
+
+@inventory_ext_api.get("/api/v1/services/{inventory_id}", status_code=HTTPStatus.OK)
+async def api_get_services(
+    inventory_id: str,
+    user: User = Depends(check_user_exists),
+):
+    inventory = await get_inventory(user.id, inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot access external services.",
+        )
+    return await get_external_services()
+
+
+@inventory_ext_api.delete(
+    "/api/v1/services/{inventory_id}/{service_id}", status_code=HTTPStatus.NO_CONTENT
+)
+async def api_delete_service(
+    inventory_id: str,
+    service_id: str,
+    user: User = Depends(check_user_exists),
+):
+    service = await get_external_service(service_id)
+    if not service:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="External service not found.",
+        )
+    inventory = await get_inventory(user.id, service.inventory_id)
+    if not inventory or inventory.user_id != user.id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot delete external service.",
+        )
+    await delete_external_service(service_id)
+
+
+# Webhook
+@inventory_ext_api.post("/api/v1/webhooks/stock-update", status_code=HTTPStatus.CREATED)
+async def api_webhook_stock_update(
+    request: Request,
+    data: WebhookPayload,
+    x_api_key: str = Header(..., alias="X-API-Key"),
+):
+    pass

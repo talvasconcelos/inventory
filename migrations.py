@@ -79,42 +79,22 @@ async def m001_initial(db: Database):
     )
 
     """
-    -- Table: orders
-    -- Purpose: Stores high-level order information for completed checkouts.
-        Links to an inventory and records total amount for auditing.
+    -- Table: external services
+    -- Purpose: external services that can interact with the inventory system.
     """
     await db.execute(
         f"""
-       CREATE TABLE inventory.orders (
-           id {db.serial_primary_key},
+       CREATE TABLE inventory.external_services (
+           id TEXT PRIMARY KEY,
            inventory_id TEXT NOT NULL,
-           total_amount REAL NOT NULL,
-           status TEXT DEFAULT 'pending',
-           created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
-           updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+           service_name TEXT NOT NULL,
+           description TEXT,
+           api_key TEXT NOT NULL,
+           is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
+           last_used_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );
-   """
-    )
-
-    """
-    -- Table: order_items
-    -- Purpose: Stores details of items purchased in an order, including pricing,
-    discounts, and taxes at checkout.
-    """
-    await db.execute(
-        f"""
-       CREATE TABLE inventory.order_items (
-           id {db.serial_primary_key},
-           order_id INTEGER NOT NULL,
-           item_id TEXT NOT NULL,
-           quantity INTEGER NOT NULL CHECK (quantity > 0),
-           base_price REAL NOT NULL,
-           discount_amount REAL DEFAULT 0.00,
-           tax_amount REAL DEFAULT 0.00,
-           final_price REAL NOT NULL,
-           created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
-       );
-   """
+       """
     )
 
     """
@@ -131,4 +111,27 @@ async def m001_initial(db: Database):
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );
    """
+    )
+
+    """
+    -- Table: Audit Logs
+    -- Purpose: Records all significant actions taken within the inventory system,
+       including item updates, stock changes, and external service interactions.
+    """
+    await db.execute(
+        f"""
+       CREATE TABLE inventory.audit_logs (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           inventory_id TEXT NOT NULL,
+           item_id TEXT NOT NULL,
+           quantity_change INTEGER NOT NULL,
+           quantity_before INTEGER NOT NULL,
+           quantity_after INTEGER NOT NULL,
+           source TEXT NOT NULL,
+           external_service_id TEXT,
+           idempotency_key TEXT NOT NULL,
+           metadata TEXT,
+           created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+       );
+    """
     )

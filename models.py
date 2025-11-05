@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from lnbits.db import FilterModel
 
@@ -107,41 +107,6 @@ class ItemFilters(FilterModel):
     updated_at: datetime | None = None
 
 
-class OrderStatus(str, Enum):
-    PENDING = "pending"
-    PAID = "paid"
-    CANCELLED = "cancelled"
-    COMPLETED = "completed"
-
-
-class CreateOrder(BaseModel):
-    inventory_id: str
-    total_amount: float
-    status: OrderStatus = OrderStatus.PENDING
-
-
-class Order(CreateOrder):
-    id: int
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
-class CreateOrderItem(BaseModel):
-    order_id: int
-    item_id: str
-    quantity: int
-    base_price: float
-    discount_amount: float = 0.0
-    tax_amount: float = 0.0
-    final_price: float
-
-
-class OrderItem(BaseModel):
-    id: int
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-
 # Inventory owner can assign managers to help manage items and stock
 class CreateManager(BaseModel):
     inventory_id: str
@@ -153,3 +118,98 @@ class Manager(CreateManager):
     id: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# External services that can update inventory via API or webhooks
+class CreateExternalService(BaseModel):
+    service_name: str
+    inventory_id: str
+    description: str | None = None
+
+
+class ExternalService(CreateExternalService):
+    id: str
+    api_key: str
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_used_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# Inventory update logs
+class InventoryUpdateMetadata(BaseModel):
+    order_id: int | None = None
+    transaction_id: str | None = None
+    note: str | None = None
+
+
+class UpdateSource(str, Enum):
+    WEBHOOK = "webhook"
+    MANUAL = "manual"
+    SYSTEM = "system"
+
+
+class CreateInventoryUpdateLog(BaseModel):
+    inventory_id: str
+    item_id: str
+    quantity_change: int
+    quantity_before: int
+    quantity_after: int
+    source: UpdateSource = UpdateSource.WEBHOOK
+    external_service_id: str | None = None
+    idempotency_key: str
+    metadata: InventoryUpdateMetadata | None = None
+
+
+class InventoryUpdateLog(CreateInventoryUpdateLog):
+    id: int
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class InventoryLogFilters(FilterModel):
+    __search_fields__ = ["external_service_id", "idempotency_key", "item_id"]
+
+    __sort_fields__ = [
+        "created_at",
+        "item_id",
+        "quantity_change",
+        "external_service_id",
+        "source",
+    ]
+
+    external_service_id: str | None = None
+    idempotency_key: str | None = None
+    item_id: str | None = None
+    created_at: datetime | None = None
+    source: UpdateSource | None = None
+
+
+# Webhook models
+class UpdateOperation(str, Enum):
+    ADD = "add"
+    SUBTRACT = "subtract"
+    SET = "set"
+
+
+class InventoryItem(BaseModel):
+    item_id: str
+    quantity_change: int
+    operation: UpdateOperation = UpdateOperation.SUBTRACT
+
+
+class WebhookPayload(BaseModel):
+    """Webhook payload for inventory updates"""
+
+    inventory_id: str
+    items: list[InventoryItem]
+    timestamp: datetime
+    idempotency_key: str = Field(..., min_length=16, max_length=128)
+
+    @validator("timestamp")
+    def validate_timestamp(cls, v):
+        """Ensure timestamp is recent (within 5 minutes)"""
+        now = datetime.now(timezone.utc)
+        time_diff = abs((now - v).total_seconds())
+
+        if time_diff > 300:  # 5 minutes
+            raise ValueError("Timestamp too old or in future")
+        return v
