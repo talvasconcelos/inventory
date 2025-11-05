@@ -488,10 +488,9 @@ async def api_get_services(
 
 
 @inventory_ext_api.delete(
-    "/api/v1/services/{inventory_id}/{service_id}", status_code=HTTPStatus.NO_CONTENT
+    "/api/v1/services/{service_id}", status_code=HTTPStatus.NO_CONTENT
 )
 async def api_delete_service(
-    inventory_id: str,
     service_id: str,
     user: User = Depends(check_user_exists),
 ):
