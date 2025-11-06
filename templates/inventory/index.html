@@ -1,7 +1,222 @@
 {% extends "base.html" %} {% from "macros.jinja" import window_vars with context
 %} {% block page %}
-<div class="row q-col-gutter-md">
-  <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
+<div>
+  {% include "inventory/_dialogs.html" %}
+  <div v-if="inventory == null" class="flex flex-center q-py-xl">
+    <q-card class="q-my-xl q-pa-lg">
+      <q-card-section class="text-center">
+        <div class="text-h6">No inventories found</div>
+        <div class="text-subtitle2">
+          You haven't created any inventories yet. Click the button below to get
+          started.
+        </div>
+      </q-card-section>
+      <q-card-actions align="center">
+        <q-btn
+          color="primary"
+          label="Create Inventory"
+          @click="showInventoryDialog"
+        >
+        </q-btn>
+      </q-card-actions>
+    </q-card>
+  </div>
+  <div v-else class="justify-center">
+    <q-separator class="q-my-md"></q-separator>
+    <!-- <h5 class="q-mb-lg"><span v-text="inventory.name"></span></h5> -->
+    <q-toolbar class="q-pb-lg">
+      <q-btn-toggle
+        v-model="tab"
+        flat
+        stretch
+        toggle-color="accent"
+        :options="tabOptions"
+      ></q-btn-toggle>
+      <q-space></q-space>
+      <q-select
+        dense
+        outlined
+        style="min-width: 200px"
+        v-model="type"
+        :options="['All','Free','Paid']"
+        class="float-right"
+        label="Category"
+      ></q-select>
+    </q-toolbar>
+    <section v-if="tab === 'items'">
+      <q-toolbar class="q-mb-md">
+        <q-btn
+          color="primary"
+          label="Add Item"
+          @click="itemDialog.show = true"
+        ></q-btn>
+        <q-space></q-space>
+        <q-input
+          standout
+          dense
+          debounce="300"
+          color="primary"
+          v-model="itemsTable.search"
+          @keyup.enter="getItemsPaginated"
+        >
+          <template v-slot:append>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </q-toolbar>
+      <div v-if="!items.length" class="flex flex-center q-py-xl">
+        <q-card class="q-my-xl q-pa-lg">
+          <q-card-section class="text-center">
+            <div class="text-h6">No items yet...</div>
+            <div class="text-subtitle2">
+              You haven't created any items yet. Click the button below to get
+              started.
+            </div>
+          </q-card-section>
+          <q-card-actions align="center">
+            <q-btn
+              color="primary"
+              label="Add Item"
+              @click="itemDialog.show = true"
+            >
+            </q-btn>
+          </q-card-actions>
+        </q-card>
+      </div>
+      <div class="q-pb-xl">
+        <div class="row q-col-gutter-md">
+          <div
+            class="col-12 col-sm-6 col-lg-4"
+            v-for="item in items"
+            :key="item.id"
+            @click="showItemDialog(item.id)"
+          >
+            <item-card :item="item"></item-card>
+          </div>
+        </div>
+      </div>
+      <q-card-actions
+        class="bg-transparent absolute-bottom"
+        align="center"
+        v-if="items.length"
+      >
+        <q-pagination
+          v-model="itemsTable.pagination.page"
+          :min="1"
+          :max="itemsTable.pagination.page"
+          :input="true"
+          input-class="text-accent"
+          @update:model-value="getItemsPaginated"
+          boundary-links
+        >
+        </q-pagination>
+      </q-card-actions>
+    </section>
+    <section v-if="tab === 'managers'">
+      <q-toolbar class="q-mb-md">
+        <q-btn
+          color="primary"
+          label="Add Manager"
+          @click="managerDialog.show = true"
+        ></q-btn>
+      </q-toolbar>
+      <div class="row">
+        <q-list bordered class="col-12 col-md-8 rounded-borders">
+          <q-expansion-item
+            v-for="manager in managers"
+            :key="manager.id"
+            expand-separator
+            icon="perm_identity"
+            :label="manager.name"
+            :caption="manager.email"
+            @show="getManagerItems(manager.id)"
+          >
+            <q-card>
+              <q-card-section>
+                <q-table
+                  flat
+                  bordered
+                  title="Items"
+                  :rows="items"
+                  :columns="itemsTable.columns"
+                  row-key="id"
+                  v-model:pagination="itemsTable.pagination"
+                  @request="getManagerItems(manager.id)"
+                  :loading="loadingItems"
+                >
+                  <template v-slot:top>
+                    <q-space></q-space>
+                    <q-input
+                      standout
+                      dense
+                      debounce="300"
+                      color="primary"
+                      v-model="itemsTable.search"
+                    >
+                      <template v-slot:append>
+                        <q-icon name="search" />
+                      </template>
+                    </q-input>
+                  </template>
+                  <template v-slot:header="props">
+                    <q-tr :props="props">
+                      <q-th auto-width></q-th>
+                      <q-th auto-width></q-th>
+                      <q-th
+                        v-for="col in props.cols"
+                        :key="col.name"
+                        :props="props"
+                        v-text="col.label"
+                      ></q-th>
+                    </q-tr>
+                  </template>
+                  <template v-slot:body="props">
+                    <q-tr :props="props">
+                      <q-td auto-width>
+                        <q-btn
+                          unlevated
+                          size="sm"
+                          color="pink"
+                          dense
+                          @click="deleteItem(props.row.id)"
+                          icon="delete"
+                        ></q-btn>
+                      </q-td>
+                      <q-td auto-width>
+                        <q-btn
+                          unlevated
+                          size="sm"
+                          color="accent"
+                          dense
+                          @click="showItemDialog(props.row.id)"
+                          icon="edit"
+                        ></q-btn>
+                      </q-td>
+                      <q-td
+                        v-for="col in props.cols"
+                        :key="col.name"
+                        :props="props"
+                        v-text="col.value"
+                      >
+                      </q-td>
+                    </q-tr>
+                  </template>
+                </q-table>
+              </q-card-section>
+            </q-card>
+          </q-expansion-item>
+        </q-list>
+      </div>
+    </section>
+    <section v-if="tab === 'services'">
+      <h2>Services</h2>
+    </section>
+    <section v-if="tab === 'orders'">
+      <h2>Orders</h2>
+    </section>
+    <!-- </q-card> -->
+    <!-- </div> -->
+    <!-- <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
     <q-card>
       <q-card-section>
         <q-btn unelevated color="primary" @click="showInventoryDialog"
@@ -147,7 +362,6 @@
                       ></q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                      <!-- <q-item-label caption>2 min ago</q-item-label> -->
                       <div class="">
                         <q-icon name="preview"></q-icon>
                         <q-icon name="edit"></q-icon>
@@ -163,8 +377,8 @@
         </template>
       </q-list>
     </q-card>
-  </div>
-  <div class="col-12 col-md-4 col-lg-5 q-gutter-y-md">
+  </div> -->
+    <!-- <div class="col-12 col-md-4 col-lg-5 q-gutter-y-md">
     <q-card>
       <q-card-section>
         <h6 class="text-subtitle1 q-my-none">
@@ -172,9 +386,10 @@
         </h6>
       </q-card-section>
     </q-card>
+  </div> -->
   </div>
-  {% include "inventory/_dialogs.html" %}
 </div>
 {% endblock %} {% block scripts %} {{ window_vars(user) }}
 <script src="{{ static_url_for('inventory/static', path='js/index.js') }}"></script>
+<script src="{{ static_url_for('inventory/static', path='components/item-card.js') }}"></script>
 {% endblock %}

@@ -21,8 +21,15 @@ window.app = Vue.createApp({
   // Declare models/variables
   data() {
     return {
+      tab: 'items',
+      tabOptions: [
+        {label: 'Items', value: 'items'},
+        {label: 'Managers', value: 'managers'},
+        {label: 'Services', value: 'services'},
+        {label: 'Orders', value: 'orders'}
+      ],
       currencyOptions: [],
-      inventories: [],
+      inventory: null,
       managers: [],
       items: [],
       inventoryDialog: {
@@ -121,7 +128,7 @@ window.app = Vue.createApp({
           }
         ],
         pagination: {
-          rowsPerPage: 10,
+          rowsPerPage: 5,
           page: 1,
           rowsNumber: 10
         },
@@ -139,16 +146,14 @@ window.app = Vue.createApp({
     }
   },
   methods: {
-    showInventoryDialog(id) {
+    showInventoryDialog() {
       this.inventoryDialog.show = true
-      if (id) {
-        const inventory = this.inventories.find(inv => inv.id === id)
-        this.inventoryDialog.data = {...inventory}
+      if (this.inventory) {
+        this.inventoryDialog.data = {...this.inventory}
         return
       }
       this.inventoryDialog.data = {}
-      this.inventoryDialog.data.is_tax_inclusive =
-        this.inventoryDialog.data.is_tax_inclusive ?? true
+      this.inventoryDialog.data.is_tax_inclusive = true
     },
     closeInventoryDialog() {
       this.inventoryDialog.show = false
@@ -170,10 +175,15 @@ window.app = Vue.createApp({
           '/inventory/api/v1/inventories'
         )
         console.log('Fetched inventories:', data)
-        this.inventories = [...data]
-        console.log('Fetched inventories:', this.inventories)
+        this.inventory = {...data} // Change to single inventory
+        this.openInventory = this.inventory.id
+        this.openInventoryCurrency = this.inventory.currency
+        await this.getItemsPaginated()
+        await this.getCategories()
+        await this.getManagers()
+        console.log('Fetched inventory:', this.inventory)
       } catch (error) {
-        console.error('Error fetching inventories:', error)
+        console.error('Error fetching inventory:', error)
         LNbits.utils.notifyError(error)
       }
     },
@@ -193,7 +203,7 @@ window.app = Vue.createApp({
           null,
           payload
         )
-        this.inventories.push(mapObject(createdInventory))
+        this.inventory = {...createdInventory}
       } catch (error) {
         console.error('Error creating inventory:', error)
         LNbits.utils.notifyError(error)
@@ -209,12 +219,7 @@ window.app = Vue.createApp({
           null,
           data
         )
-        const index = this.inventories.findIndex(
-          inv => inv.id === updatedInventory.id
-        )
-        if (index !== -1) {
-          this.inventories.splice(index, 1, mapObject(updatedInventory))
-        }
+        this.inventory = {...updatedInventory}
       } catch (error) {
         console.error('Error updating inventory:', error)
         LNbits.utils.notifyError(error)
@@ -236,39 +241,44 @@ window.app = Vue.createApp({
               'DELETE',
               `/inventory/api/v1/inventories/${id}`
             )
-            this.inventories = this.inventories.filter(inv => inv.id !== id)
-            if (this.openInventory === id) {
-              this.openInventory = null
-              this.items = []
-            }
+            this.inventory = null
+            this.openInventory = null
+            this.items = []
           } catch (error) {
             console.error('Error deleting inventory:', error)
             LNbits.utils.notifyError(error)
           }
         })
     },
-    async setOpenInventory(id) {
-      console.log('Fetching items for inventory:', id)
-      this.openInventory = id
-      this.openInventoryCurrency =
-        this.inventories.find(inv => inv.id === id)?.currency || null
-      this.categories = []
-      console.log('Open inventory currency:', this.openInventoryCurrency)
-      await this.getItemsPaginated()
-      await this.getCategories()
-      await this.getManagers()
-    },
+    // DELETE THIS METHOD IF SINGLE INVENTORY
+    // async setOpenInventory(id) {
+    //   console.log('Fetching items for inventory:', id)
+    //   this.openInventory = id
+    //   this.openInventoryCurrency =
+    //     this.inventories.find(inv => inv.id === id)?.currency || null
+    //   this.categories = []
+    //   console.log('Open inventory currency:', this.openInventoryCurrency)
+    //   await this.getItemsPaginated()
+    //   await this.getCategories()
+    //   await this.getManagers()
+    // },
     async getItemsPaginated(props) {
+      console.log('Getting paginated items with props:', props)
       this.loadingItems = true
       try {
         const params = LNbits.utils.prepareFilterQuery(this.itemsTable, props)
+        console.log('Constructed query params:', params)
         const {data} = await LNbits.api.request(
           'GET',
           `/inventory/api/v1/items/${this.openInventory}/paginated?${params}`
         )
-        this.items = data.data.map(item => mapObject(item))
+        console.log('Fetched paginated items:', data)
+        this.items = [...data.data]
         this.itemsTable.pagination.rowsNumber = data.total
-        // console.log('Fetched items:', this.items)
+        this.itemsTable.pagination.page =
+          data.total > 0
+            ? Math.ceil(data.total / this.itemsTable.pagination.rowsPerPage)
+            : 1
       } catch (error) {
         console.error('Error fetching items:', error)
         LNbits.utils.notifyError(error)
@@ -401,7 +411,7 @@ window.app = Vue.createApp({
           null,
           payload
         )
-        this.managers.push(mapObject(createdManager))
+        this.managers = [...this.managers, createdManager]
       } catch (error) {
         console.error('Error creating manager:', error)
         LNbits.utils.notifyError(error)
@@ -418,7 +428,7 @@ window.app = Vue.createApp({
           payload
         )
         this.managers = this.managers.map(manager =>
-          manager.id === updatedManager.id ? mapObject(updatedManager) : manager
+          manager.id === updatedManager.id ? updatedManager : manager
         )
       } catch (error) {
         console.error('Error updating manager:', error)
@@ -426,6 +436,13 @@ window.app = Vue.createApp({
       } finally {
         this.closeManagerDialog()
       }
+    },
+    async getManagerItems(managerId) {
+      return await this.getItemsPaginated({
+        pagination: {...this.itemsTable.pagination},
+        filter: {manager_id: managerId}
+      })
+      // console.log('Fetched items for manager:', managerItems)
     }
   },
   // To run on startup

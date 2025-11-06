@@ -61,7 +61,7 @@ items_filters = parse_filters(ItemFilters)
 @inventory_ext_api.get("/api/v1/inventories", status_code=HTTPStatus.OK)
 async def api_get_inventories(
     user: User = Depends(check_user_exists),
-) -> list[Inventory]:
+) -> Inventory | None:
     return await get_inventories(user.id)
 
 

@@ -7,7 +7,7 @@ def create_api_key() -> str:
     return "sk_" + key[1]
 
 
-async def verify_api_key(api_key: str) -> Optional[dict]:
+async def verify_api_key(api_key: str) -> dict | None:
     """
     Verify API key and return service info.
     Replace with your actual database lookup.

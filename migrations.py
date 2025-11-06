@@ -106,7 +106,8 @@ async def m001_initial(db: Database):
        CREATE TABLE inventory.managers (
            id TEXT PRIMARY KEY,
            inventory_id TEXT NOT NULL,
-           name TEXT,
+           name TEXT NOT NULL,
+           email TEXT,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );
@@ -121,7 +122,7 @@ async def m001_initial(db: Database):
     await db.execute(
         f"""
        CREATE TABLE inventory.audit_logs (
-           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           id {db.serial_primary_key},
            inventory_id TEXT NOT NULL,
            item_id TEXT NOT NULL,
            quantity_change INTEGER NOT NULL,

@@ -23,8 +23,8 @@ from .models import (
 db = Database("ext_inventory")
 
 
-async def get_inventories(user_id: str) -> list[Inventory]:
-    return await db.fetchall(
+async def get_inventories(user_id: str) -> Inventory | None:
+    return await db.fetchone(
         """
         SELECT * FROM inventory.inventories
         WHERE user_id = :user_id

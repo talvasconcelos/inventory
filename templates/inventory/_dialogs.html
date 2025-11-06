@@ -257,7 +257,7 @@
         filled
         multiple
         use-chips
-        :options="inventories.find(inv => inv.id === openInventory).tags"
+        :options="inventory.tags"
         v-model="itemDialog.data.tags"
         label="Tags"
         hint="Select tags for this item"
