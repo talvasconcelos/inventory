@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 
+from fastapi.params import Form
 from pydantic import BaseModel, Field, validator
 
 from lnbits.db import FilterModel
@@ -12,7 +13,7 @@ class CreateInventory(BaseModel):
     global_discount_percentage: float = 0.0
     default_tax_rate: float = 0.0
     is_tax_inclusive: bool = True
-    tags: list[str] = Field(default_factory=list)
+    tags: str | None = None
 
 
 class PublicInventory(CreateInventory):
@@ -42,7 +43,7 @@ class CreateItem(BaseModel):
     categories: list[Category] = Field(default_factory=list)
     name: str
     description: str | None = None
-    images: list[str] = Field(default_factory=list)
+    images: str | None = None
     sku: str | None = None
     quantity_in_stock: int | None = None
     price: float
@@ -51,9 +52,11 @@ class CreateItem(BaseModel):
     reorder_threshold: int | None = None
     unit_cost: float | None = None
     external_id: str | None = None
-    tags: list[str] = Field(default_factory=list)
+    tags: str | None = None
+    is_active: bool = True
     internal_note: str | None = None
     manager_id: str | None = None
+    is_approved: bool = True
 
 
 class PublicItem(BaseModel):
@@ -62,15 +65,15 @@ class PublicItem(BaseModel):
     categories: list[Category] = Field(default_factory=list)
     name: str
     description: str | None = None
-    images: list[str] = Field(default_factory=list)
+    images: str | None = None
     sku: str | None = None
     quantity_in_stock: int | None = None
     price: float
     discount_percentage: float | None
     tax_rate: float | None
     external_id: str | None = None
-    tags: list[str] = Field(default_factory=list)
-    is_active: bool = True
+    tags: str | None = None
+    is_active: bool
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -81,6 +84,7 @@ class Item(PublicItem):
     internal_note: str | None = None
     unit_cost: float | None = None
     reorder_threshold: int | None = None
+    is_approved: bool = False
 
 
 class ItemFilters(FilterModel):
@@ -92,6 +96,7 @@ class ItemFilters(FilterModel):
         "internal_note",
         "manager_id",
         "tags",
+        "is_approved",
     ]
 
     __sort_fields__ = ["name", "created_at", "price", "quantity_in_stock", "tags"]
@@ -103,6 +108,7 @@ class ItemFilters(FilterModel):
     internal_note: str | None = None
     tags: str | None = None
     manager_id: str | None = None
+    is_approved: bool | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -125,6 +131,7 @@ class CreateExternalService(BaseModel):
     service_name: str
     inventory_id: str
     description: str | None = None
+    tags: str | None = None
 
 
 class ExternalService(CreateExternalService):

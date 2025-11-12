@@ -31,6 +31,7 @@ from .crud import (
     get_inventory_items_paginated,
     get_item,
     get_manager,
+    get_manager_items,
     get_managers,
     get_public_inventory,
     is_category_unique,
@@ -314,6 +315,30 @@ async def api_delete_manager(
     await delete_manager(manager_id)
 
 
+@inventory_ext_api.get("/api/v1/manager/{manager_id}/items", status_code=HTTPStatus.OK)
+async def api_manager_get_items(
+    manager_id: str,
+) -> list[Item]:
+    manager = await get_manager(manager_id)
+    if not manager:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Manager not found.",
+        )
+    inventory = await get_public_inventory(manager.inventory_id)
+    if not inventory:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail="Cannot access items.",
+        )
+    if manager.inventory_id != inventory.id:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail="Manager does not belong to the specified inventory.",
+        )
+    return await get_manager_items(inventory.id, manager_id)
+
+
 @inventory_ext_api.post(
     "/api/v1/managers/{manager_id}/item", status_code=HTTPStatus.CREATED
 )
@@ -344,6 +369,7 @@ async def api_manager_create_item(
             detail="Item does not belong to the specified inventory.",
         )
     item.manager_id = manager.id
+    item.is_approved = False
     return await create_item(item)
 
 

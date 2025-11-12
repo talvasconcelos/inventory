@@ -220,6 +220,17 @@ async def delete_manager(manager_id: str) -> None:
     )
 
 
+async def get_manager_items(inventory_id: str, manager_id: str) -> list[Item]:
+    return await db.fetchall(
+        """
+        SELECT * FROM inventory.items
+        WHERE inventory_id = :inventory_id AND manager_id = :manager_id
+        """,
+        {"inventory_id": inventory_id, "manager_id": manager_id},
+        model=Item,
+    )
+
+
 async def create_external_service(data: CreateExternalService) -> ExternalService:
     service_id = urlsafe_short_hash()
     ext_service = ExternalService(

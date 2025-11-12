@@ -1,20 +1,3 @@
-const mapObject = obj => {
-  obj.price = Number(obj.price.toFixed(2))
-  if (obj.discount_percentage) {
-    obj.discount_percentage = Number(obj.discount_percentage.toFixed(2))
-  }
-  if (obj.discount_percentage) {
-    obj.discount_percentage = Number(obj.discount_percentage.toFixed(2))
-  }
-  if (obj.unit_cost) {
-    obj.unit_cost = Number(obj.unit_cost.toFixed(2))
-  }
-  if (obj.tax_rate) {
-    obj.tax_rate = Number(obj.tax_rate.toFixed(2))
-  }
-  return obj
-}
-
 window.app = Vue.createApp({
   el: '#vue',
   mixins: [windowMixin],
@@ -31,6 +14,7 @@ window.app = Vue.createApp({
       currencyOptions: [],
       inventory: null,
       managers: [],
+      services: [],
       items: [],
       inventoryDialog: {
         show: false,
@@ -40,11 +24,17 @@ window.app = Vue.createApp({
         show: false,
         data: {}
       },
-      openInventory: null,
-      openInventoryCurrency: null,
-      itemDialog: {
+      serviceDialog: {
         show: false,
         data: {}
+      },
+      openInventory: null,
+      openInventoryCurrency: null,
+      itemGrid: true,
+      itemDialog: {
+        show: false,
+        data: {},
+        gallery: []
       },
       itemsTable: {
         columns: [
@@ -128,20 +118,106 @@ window.app = Vue.createApp({
           }
         ],
         pagination: {
-          rowsPerPage: 5,
+          rowsPerPage: 10,
           page: 1,
           rowsNumber: 10
         },
-        search: ''
+        search: '',
+        filter: {
+          is_approved: true
+        }
       },
       loadingItems: false,
-      categories: []
+      categories: [],
+      servicesTable: {
+        columns: [
+          {
+            name: 'name',
+            align: 'left',
+            label: 'Name',
+            field: 'service_name',
+            sortable: true
+          },
+          {
+            name: 'description',
+            align: 'left',
+            label: 'Description',
+            field: 'description',
+            sortable: false,
+            format: val => (val || '').substring(0, 50)
+          },
+          {
+            name: 'api_key',
+            align: 'left',
+            label: 'API Key',
+            field: 'api_key',
+            sortable: true,
+            format: val =>
+              val
+                ? val.substring(0, 8) + '...' + val.substring(val.length - 8)
+                : ''
+          },
+          {
+            name: 'tags',
+            align: 'left',
+            label: 'Tags',
+            field: 'tags',
+            sortable: true,
+            format: val => (val ? val.toString() : '')
+          },
+          {
+            name: 'active',
+            align: 'left',
+            label: 'Active',
+            field: 'is_active',
+            sortable: true,
+            format: val => (val ? 'Yes' : 'No')
+          },
+          {
+            name: 'created_at',
+            align: 'left',
+            label: 'Created At',
+            field: 'created_at',
+            format: val => LNbits.utils.formatDateString(val),
+            sortable: true
+          },
+          {
+            name: 'last_used_at',
+            align: 'left',
+            label: 'Last Used At',
+            field: 'last_used_at',
+            format: val => (val ? LNbits.utils.formatDateString(val) : 'Never'),
+            sortable: true
+          }
+        ],
+        pagination: {
+          rowsPerPage: 10,
+          page: 1,
+          rowsNumber: 10
+        },
+        search: '',
+        filter: {}
+      }
     }
   },
   watch: {
     'itemsTable.search': {
       handler() {
         this.getItemsPaginated()
+      }
+    },
+    async tab(newTab) {
+      if (newTab === 'items') {
+        this.itemsTable.pagination = {
+          rowsPerPage: 10,
+          page: 1,
+          rowsNumber: 10
+        }
+        this.itemsTable.search = ''
+        this.itemsTable.filter = {is_approved: true}
+        await this.getItemsPaginated()
+      } else if (newTab === 'services') {
+        await this.getServices()
       }
     }
   },
@@ -163,6 +239,10 @@ window.app = Vue.createApp({
       this.managerDialog.show = false
       this.managerDialog.data = {}
     },
+    closeServiceDialog() {
+      this.serviceDialog.show = false
+      this.serviceDialog.data = {}
+    },
     createOrUpdateDisabled() {
       if (!this.inventoryDialog.show) return true
       const data = this.inventoryDialog.data
@@ -174,7 +254,7 @@ window.app = Vue.createApp({
           'GET',
           '/inventory/api/v1/inventories'
         )
-        console.log('Fetched inventories:', data)
+        data.tags = data.tags.split(',') || []
         this.inventory = {...data} // Change to single inventory
         this.openInventory = this.inventory.id
         this.openInventoryCurrency = this.inventory.currency
@@ -188,10 +268,14 @@ window.app = Vue.createApp({
       }
     },
     submitInventoryData() {
-      if (this.inventoryDialog.data.id) {
-        this.updateInventory(this.inventoryDialog.data)
+      const data = this.inventoryDialog.data
+      if (data.tags && Array.isArray(data.tags)) {
+        data.tags = data.tags.join(',')
+      }
+      if (data.id) {
+        this.updateInventory(data)
       } else {
-        this.createInventory(this.inventoryDialog.data)
+        this.createInventory(data)
       }
     },
     async createInventory(data) {
@@ -219,6 +303,7 @@ window.app = Vue.createApp({
           null,
           data
         )
+        updatedInventory.tags = fromCsv(updatedInventory.tags)
         this.inventory = {...updatedInventory}
       } catch (error) {
         console.error('Error updating inventory:', error)
@@ -250,18 +335,14 @@ window.app = Vue.createApp({
           }
         })
     },
-    // DELETE THIS METHOD IF SINGLE INVENTORY
-    // async setOpenInventory(id) {
-    //   console.log('Fetching items for inventory:', id)
-    //   this.openInventory = id
-    //   this.openInventoryCurrency =
-    //     this.inventories.find(inv => inv.id === id)?.currency || null
-    //   this.categories = []
-    //   console.log('Open inventory currency:', this.openInventoryCurrency)
-    //   await this.getItemsPaginated()
-    //   await this.getCategories()
-    //   await this.getManagers()
-    // },
+    toggleItemView() {
+      this.itemGrid = !this.itemGrid
+      this.$q.localStorage.set('lnbits_inventoryItemGrid', this.itemGrid)
+    },
+    itemsTabPagination(page) {
+      this.itemsTable.pagination.page = page
+      this.getItemsPaginated()
+    },
     async getItemsPaginated(props) {
       console.log('Getting paginated items with props:', props)
       this.loadingItems = true
@@ -273,12 +354,8 @@ window.app = Vue.createApp({
           `/inventory/api/v1/items/${this.openInventory}/paginated?${params}`
         )
         console.log('Fetched paginated items:', data)
-        this.items = [...data.data]
+        this.items = data.data.map(item => mapItems(item))
         this.itemsTable.pagination.rowsNumber = data.total
-        this.itemsTable.pagination.page =
-          data.total > 0
-            ? Math.ceil(data.total / this.itemsTable.pagination.rowsPerPage)
-            : 1
       } catch (error) {
         console.error('Error fetching items:', error)
         LNbits.utils.notifyError(error)
@@ -306,7 +383,16 @@ window.app = Vue.createApp({
       this.itemDialog.show = true
       if (id) {
         const item = this.items.find(it => it.id === id)
+        console.log('Editing item:', item)
         this.itemDialog.data = {...item}
+        this.itemDialog.gallery = item.images.map(id => {
+          return {
+            assetId: id,
+            preview: isBase64String(id) ? id : `/api/v1/assets/${id}/thumbnail`,
+            file: null,
+            isNew: false
+          }
+        })
         return
       }
       this.itemDialog.data = {}
@@ -314,17 +400,53 @@ window.app = Vue.createApp({
     closeItemDialog() {
       this.itemDialog.show = false
       this.itemDialog.data = {}
+      this.itemDialog.gallery.forEach(p => {
+        // cleanup object URLs
+        if (p.preview && p.isNew) URL.revokeObjectURL(p.preview)
+      })
+      this.itemDialog.gallery = []
     },
     submitItemData() {
-      if (this.itemDialog.data.id) {
-        this.updateItem(this.itemDialog.data)
+      const data = this.itemDialog.data
+      data.tags = toCsv(data.tags)
+      console.log('Submitting inventory data:', data)
+      console.log('photos:', this.itemDialog.gallery)
+      if (data.id) {
+        this.updateItem(data)
       } else {
         this.addItem()
       }
     },
-    async addItem() {
-      this.itemDialog.data.inventory_id = this.openInventory
+    async uploadPhoto(photoFile) {
+      const form = new FormData()
+      form.append('file', photoFile)
+      form.append('public_asset', 'true')
+
       try {
+        const {data} = await LNbits.api.request(
+          'POST',
+          '/api/v1/assets',
+          null,
+          form
+        )
+        return data.id
+      } catch (error) {
+        const msg =
+          error.response?.data?.detail || error.message || 'Upload failed'
+        console.error('Photo upload error:', msg)
+        LNbits.utils.notifyError(`Photo upload failed: ${msg}`)
+        throw error
+      }
+    },
+    async addItem() {
+      this.itemDialog.data.inventory_id = this.inventory.id
+      try {
+        const assetIds = await Promise.all(
+          this.itemDialog.gallery
+            .filter(p => p.file)
+            .map(p => this.uploadPhoto(p.file))
+        )
+        this.itemDialog.data.images = toCsv(assetIds)
         const {data} = await LNbits.api.request(
           'POST',
           `/inventory/api/v1/items`,
@@ -342,6 +464,29 @@ window.app = Vue.createApp({
       }
     },
     async updateItem(data) {
+      const newPhotos = this.itemDialog.gallery.filter(p => p.isNew && p.file)
+      let newAssetIds = []
+
+      if (newPhotos.length > 0) {
+        try {
+          newAssetIds = await Promise.all(
+            newPhotos.map(p => this.uploadPhoto(p.file))
+          )
+        } catch (error) {
+          LNbits.utils.notifyError('Failed to upload new photos')
+          return
+        }
+      }
+
+      const finalIds = [
+        ...this.itemDialog.gallery
+          .filter(p => !p.isNew && p.assetId)
+          .map(p => p.assetId),
+        ...newAssetIds
+      ]
+
+      data.images = toCsv(finalIds)
+
       try {
         const {data: updatedItem} = await LNbits.api.request(
           'PUT',
@@ -350,7 +495,7 @@ window.app = Vue.createApp({
           data
         )
         this.items = this.items.map(item =>
-          item.id === updatedItem.id ? mapObject(updatedItem) : item
+          item.id === updatedItem.id ? mapItems(updatedItem) : item
         )
       } catch (error) {
         console.error('Error updating item:', error)
@@ -388,6 +533,15 @@ window.app = Vue.createApp({
         console.error('Error fetching managers:', error)
         LNbits.utils.notifyError(error)
       }
+    },
+    showManagerDialog(id) {
+      this.managerDialog.show = true
+      if (id) {
+        const manager = this.managers.find(mgr => mgr.id === id)
+        this.managerDialog.data = {...manager}
+        return
+      }
+      this.managerDialog.data = {}
     },
     submitManagerData() {
       const inventoryId = this.openInventory
@@ -437,16 +591,134 @@ window.app = Vue.createApp({
         this.closeManagerDialog()
       }
     },
+    async deleteManager(id) {
+      this.$q
+        .dialog({
+          title: 'Confirm Deletion',
+          message: 'Are you sure you want to delete this manager?',
+          cancel: true,
+          persistent: true
+        })
+        .onOk(async () => {
+          try {
+            await LNbits.api.request(
+              'DELETE',
+              `/inventory/api/v1/managers/${id}`
+            )
+            this.managers = this.managers.filter(manager => manager.id !== id)
+          } catch (error) {
+            console.error('Error deleting manager:', error)
+            LNbits.utils.notifyError(error)
+          }
+        })
+    },
     async getManagerItems(managerId) {
       return await this.getItemsPaginated({
         pagination: {...this.itemsTable.pagination},
-        filter: {manager_id: managerId}
+        filter: {manager_id: managerId, is_approved: false}
       })
-      // console.log('Fetched items for manager:', managerItems)
+    },
+    showServiceDialog(id) {
+      this.serviceDialog.show = true
+      if (id) {
+        const service = this.services.find(svc => svc.id === id)
+        this.serviceDialog.data = {...service}
+        return
+      }
+      this.serviceDialog.data = {}
+    },
+    submitServiceData() {
+      const data = this.serviceDialog.data
+      data.inventory_id = this.openInventory
+      if (data.tags && Array.isArray(data.tags)) {
+        data.tags = data.tags.join(',')
+      }
+      if (data.id) {
+        this.updateService(data)
+      } else {
+        this.createService(data)
+      }
+    },
+    async getServices() {
+      try {
+        const {data} = await LNbits.api.request(
+          'GET',
+          `/inventory/api/v1/services/${this.openInventory}`
+        )
+        this.services = [...data].map(service => {
+          if (service.tags && typeof service.tags === 'string') {
+            service.tags = service.tags.split(',').map(tag => tag.trim())
+          } else {
+            service.tags = []
+          }
+          return service
+        })
+      } catch (error) {
+        console.error('Error fetching services:', error)
+        LNbits.utils.notifyError(error)
+      }
+    },
+    async updateService(data) {
+      try {
+        const {data: updatedService} = await LNbits.api.request(
+          'PUT',
+          `/inventory/api/v1/services/${data.id}`,
+          null,
+          data
+        )
+        this.services = this.services.map(service =>
+          service.id === updatedService.id ? updatedService : service
+        )
+        console.log('Service updated:', updatedService)
+      } catch (error) {
+        console.error('Error updating service:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeServiceDialog()
+      }
+    },
+    async createService(data) {
+      try {
+        const {data: createdService} = await LNbits.api.request(
+          'POST',
+          `/inventory/api/v1/services`,
+          null,
+          data
+        )
+        this.services = [...this.services, createdService]
+        console.log('Service created:', createdService)
+      } catch (error) {
+        console.error('Error creating service:', error)
+        LNbits.utils.notifyError(error)
+      } finally {
+        this.closeServiceDialog()
+      }
+    },
+    async deleteService(id) {
+      this.$q
+        .dialog({
+          title: 'Confirm Deletion',
+          message: 'Are you sure you want to delete this service?',
+          cancel: true,
+          persistent: true
+        })
+        .onOk(async () => {
+          try {
+            await LNbits.api.request(
+              'DELETE',
+              `/inventory/api/v1/services/${id}`
+            )
+            this.services = this.services.filter(service => service.id !== id)
+          } catch (error) {
+            console.error('Error deleting service:', error)
+            LNbits.utils.notifyError(error)
+          }
+        })
     }
   },
   // To run on startup
   async created() {
+    this.itemGrid = this.$q.localStorage.getItem('lnbits_inventoryItemGrid')
     await this.getInventories()
     await LNbits.api
       .request('GET', '/api/v1/currencies')
@@ -457,5 +729,9 @@ window.app = Vue.createApp({
         console.error('Error fetching currencies:', error)
         LNbits.utils.notifyError(error)
       })
+    console.log(
+      'isAdmin:',
+      this.g.user !== null && this.g.user.id === this.inventory.user_id
+    )
   }
 })

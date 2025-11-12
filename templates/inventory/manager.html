@@ -1,0 +1,291 @@
+{% extends "public.html" %} {% block toolbar_title %} Stock Manager {% endblock
+%} {% block page %}
+<div class="row justify-center">
+  <div class="text-center content-center" style="min-height: 40vh">
+    <div class="text-h5 q-my-lg">Inventory Manager Dashboard</div>
+    <div class="q-my-lg">
+      <div class="text-subtitle1">
+        Manage your inventory items here. You can add, edit, and delete items as
+        needed.
+      </div>
+    </div>
+    <q-btn color="primary" @click="showItemDialog()" label="Add Item"></q-btn>
+  </div>
+  <div class="col-12">
+    <q-card>
+      <q-card-section>
+        <q-table
+          :columns="itemsTable.columns"
+          :rows="items"
+          :loading="loadingItems"
+          :pagination.sync="itemsTable.pagination"
+          row-key="id"
+          :filter="itemsTable.search"
+          no-data-label="No items..."
+          no-results-label="No results found"
+          flat
+          bordered
+        >
+        </q-table>
+      </q-card-section>
+    </q-card>
+  </div>
+  {% include "inventory/_dialogs.html" %}
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  const manager = JSON.parse({{ manager | tojson | safe }})
+  const inventory = JSON.parse({{ inventory | tojson | safe }})
+</script>
+<script>
+  window.app = Vue.createApp({
+    el: '#vue',
+    mixins: [windowMixin],
+    data() {
+      return {
+        inventory: null,
+        manager: null,
+        items: [],
+        loadingItems: false,
+        itemsTable: {
+          columns: [
+            {
+              name: 'is_active',
+              align: 'left',
+              label: '',
+              field: 'is_active',
+              sortable: false,
+              format: (_, row) => (row.is_active === true ? '🟢' : '⚪')
+            },
+            {
+              name: 'name',
+              align: 'left',
+              label: 'Name',
+              field: 'name',
+              sortable: true
+            },
+            {
+              name: 'description',
+              align: 'left',
+              label: 'Description',
+              field: 'description',
+              sortable: false,
+              format: val => (val || '').substring(0, 50)
+            },
+            {
+              name: 'price',
+              align: 'left',
+              label: 'Price',
+              field: 'price',
+              sortable: true,
+              format: (_, row) =>
+                LNbits.utils.formatCurrency(
+                  row.price,
+                  this.openInventoryCurrency
+                )
+            },
+            {
+              name: 'discount',
+              align: 'left',
+              label: 'Discount',
+              field: 'discount_percentage',
+              sortable: true,
+              format: val => (val ? `${val}%` : '')
+            },
+            {
+              name: 'quantity_in_stock',
+              align: 'left',
+              label: 'Quantity',
+              field: 'quantity_in_stock',
+              sortable: true
+            },
+            {
+              name: 'tags',
+              align: 'left',
+              label: 'Tags',
+              field: 'tags',
+              sortable: true,
+              format: val => (val ? val.toString() : '')
+            },
+            {
+              name: 'categories',
+              align: 'left',
+              label: 'Categories',
+              field: 'categories',
+              sortable: true,
+              format: val => (val ? val.toString() : '')
+            },
+            {
+              name: 'created_at',
+              align: 'left',
+              label: 'Created At',
+              field: 'created_at',
+              format: val => LNbits.utils.formatDateString(val),
+              sortable: true
+            },
+            {
+              name: 'id',
+              align: 'left',
+              label: 'ID',
+              field: 'id',
+              sortable: true
+            }
+          ],
+          pagination: {
+            rowsPerPage: 10,
+            page: 1,
+            rowsNumber: 10
+          },
+          search: ''
+        },
+        itemDialog: {
+          show: false,
+          data: {},
+          gallery: []
+        }
+      }
+    },
+    async created() {
+      this.manager = manager
+      this.inventory = inventory
+      await this.getManagerItems()
+      console.log('Manager page created', this.g)
+    },
+    computed: {},
+    methods: {
+      async getManagerItems() {
+        this.loadingItems = true
+        try {
+          const response = await LNbits.api.request(
+            'GET',
+            `/inventory/api/v1/manager/${manager.id}/items`
+          )
+          this.itemsTable.rowsNumber = response.data.length
+          this.itemsTable.data = response.data
+          console.log('Fetched manager items:', response.data)
+          this.items = response.data.map(item => mapItems(item))
+        } catch (error) {
+          console.error('Error fetching manager items:', error)
+          LNbits.utils.notifyError('Failed to load items for this manager.')
+        } finally {
+          this.loadingItems = false
+        }
+      },
+      showItemDialog(id) {
+        this.itemDialog.show = true
+        if (id) {
+          const item = this.items.find(it => it.id === id)
+          this.itemDialog.data = {...item}
+          this.itemDialog.gallery = item.images.map(img => {
+            return {
+              assetId: null,
+              preview: img,
+              file: null,
+              isNew: false
+            }
+          })
+          return
+        }
+        this.itemDialog.data = {}
+      },
+      closeItemDialog() {
+        this.itemDialog.show = false
+        this.itemDialog.data = {}
+        this.itemDialog.gallery.forEach(p => {
+          // cleanup object URLs
+          if (p.preview && p.isNew) URL.revokeObjectURL(p.preview)
+        })
+        this.itemDialog.gallery = []
+      },
+      submitItemData() {
+        const data = this.itemDialog.data
+        data.tags = toCsv(data.tags)
+        if (data.id) {
+          this.updateItem(data)
+        } else {
+          this.addItem()
+        }
+      },
+      async addItem() {
+        this.itemDialog.data.inventory_id = this.inventory.id
+        const base64List = await Promise.all(
+          this.itemDialog.gallery.map(p => fileToBase64(p.file))
+        )
+        try {
+          this.itemDialog.data.images = toCsv(base64List, '|||')
+          const {data} = await LNbits.api.request(
+            'POST',
+            `/inventory/api/v1/managers/${this.manager.id}/item`,
+            null,
+            this.itemDialog.data
+          )
+          console.log('Item added:', data)
+          this.items = [...this.items, data]
+        } catch (error) {
+          console.error('Error adding item:', error)
+          LNbits.utils.notifyError(error)
+        } finally {
+          this.closeItemDialog()
+        }
+      },
+      async updateItem(data) {
+        const newPhotos = this.itemDialog.gallery.filter(p => p.isNew && p.file)
+        let newBase64 = []
+
+        if (newPhotos.length > 0) {
+          newBase64 = await Promise.all(
+            newPhotos.map(p => fileToBase64(p.file))
+          )
+        }
+
+        const finalImages = [
+          ...this.itemDialog.gallery.filter(p => !p.isNew).map(p => p.file),
+          ...newBase64
+        ]
+
+        data.images = toCsv(finalImages, '|||')
+
+        try {
+          const {data: updatedItem} = await LNbits.api.request(
+            'PUT',
+            `/inventory/api/v1/items/${data.id}`,
+            null,
+            data
+          )
+          this.items = this.items.map(item =>
+            item.id === updatedItem.id ? mapItems(updatedItem) : item
+          )
+        } catch (error) {
+          console.error('Error updating item:', error)
+          LNbits.utils.notifyError(error)
+        } finally {
+          this.closeItemDialog()
+        }
+      },
+      async deleteItem(id) {
+        this.$q
+          .dialog({
+            title: 'Confirm Deletion',
+            message: 'Are you sure you want to delete this item?',
+            cancel: true,
+            persistent: true
+          })
+          .onOk(async () => {
+            try {
+              await LNbits.api.request(
+                'DELETE',
+                `/inventory/api/v1/items/${id}`
+              )
+              this.items = this.items.filter(item => item.id !== id)
+            } catch (error) {
+              console.error('Error deleting item:', error)
+              LNbits.utils.notifyError(error)
+            }
+          })
+      }
+    }
+  })
+</script>
+<script src="{{ static_url_for('inventory/static', path='js/utils.js') }}"></script>
+<script src="{{ static_url_for('inventory/static', path='components/photo-gallery-form.js') }}"></script>
+{% endblock %}

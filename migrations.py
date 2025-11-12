@@ -72,6 +72,7 @@ async def m001_initial(db: Database):
            tags TEXT,
            internal_note TEXT,
            manager_id TEXT,
+           is_approved BOOLEAN DEFAULT FALSE,
            created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
            updated_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
        );
@@ -89,6 +90,7 @@ async def m001_initial(db: Database):
            inventory_id TEXT NOT NULL,
            service_name TEXT NOT NULL,
            description TEXT,
+           tags TEXT,
            api_key TEXT NOT NULL,
            is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},

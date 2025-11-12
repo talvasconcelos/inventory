@@ -8,7 +8,7 @@ from lnbits.core.models import User
 from lnbits.decorators import check_user_exists
 from lnbits.helpers import template_renderer
 
-from .crud import get_inventory, get_manager
+from .crud import get_inventory, get_manager, get_manager_items, get_public_inventory
 
 inventory_ext_generic = APIRouter(tags=["inventory"])
 
@@ -27,26 +27,26 @@ async def index(
     )
 
 
-@inventory_ext_generic.get("/dashboard/{inventory_id}", response_class=HTMLResponse)
-async def dashboard(
-    request: Request,
-    inventory_id: str,
-    user: User = Depends(check_user_exists),
-):
-    if not inventory_id:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST, detail="inventory_id is required"
-        )
-    inventory = await get_inventory(user_id=user.id, inventory_id=inventory_id)
-    if not inventory:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Inventory not found"
-        )
-    return inventory_renderer().TemplateResponse(
-        request,
-        "inventory/display.html",
-        {"user": user.json(), "inventory": inventory.json()},
-    )
+# @inventory_ext_generic.get("/dashboard/{inventory_id}", response_class=HTMLResponse)
+# async def dashboard(
+#     request: Request,
+#     inventory_id: str,
+#     user: User = Depends(check_user_exists),
+# ):
+#     if not inventory_id:
+#         raise HTTPException(
+#             status_code=HTTPStatus.BAD_REQUEST, detail="inventory_id is required"
+#         )
+#     inventory = await get_inventory(user_id=user.id, inventory_id=inventory_id)
+#     if not inventory:
+#         raise HTTPException(
+#             status_code=HTTPStatus.NOT_FOUND, detail="Inventory not found"
+#         )
+#     return inventory_renderer().TemplateResponse(
+#         request,
+#         "inventory/display.html",
+#         {"user": user.json(), "inventory": inventory.json()},
+#     )
 
 
 @inventory_ext_generic.get("/manager", response_class=HTMLResponse)
@@ -59,7 +59,18 @@ async def manager(
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="Manager not found"
         )
+    inventory = await get_public_inventory(manager.inventory_id)
+    if not inventory or inventory.id != manager.inventory_id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Inventory not found"
+        )
 
     return inventory_renderer().TemplateResponse(
-        request, "inventory/manager.html", {"manager": manager.json()}
+        request,
+        "inventory/manager.html",
+        {
+            "manager": manager.json(),
+            "inventory": inventory.json(),
+            "user": None,
+        },
     )

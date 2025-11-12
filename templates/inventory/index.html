@@ -24,32 +24,40 @@
   <div v-else class="justify-center">
     <q-separator class="q-my-md"></q-separator>
     <!-- <h5 class="q-mb-lg"><span v-text="inventory.name"></span></h5> -->
-    <q-toolbar class="q-pb-lg">
+    <q-toolbar class="q-pb-lg q-px-none">
       <q-btn-toggle
         v-model="tab"
         flat
         stretch
-        toggle-color="accent"
+        toggle-color="primary"
         :options="tabOptions"
       ></q-btn-toggle>
       <q-space></q-space>
-      <q-select
-        dense
-        outlined
-        style="min-width: 200px"
-        v-model="type"
-        :options="['All','Free','Paid']"
-        class="float-right"
-        label="Category"
-      ></q-select>
+      <q-btn
+        flat
+        color="grey-6"
+        icon="settings"
+        @click="showInventoryDialog(inventory.id)"
+      ></q-btn>
     </q-toolbar>
     <section v-if="tab === 'items'">
-      <q-toolbar class="q-mb-md">
+      <q-toolbar class="q-mb-md q-px-none">
         <q-btn
           color="primary"
           label="Add Item"
           @click="itemDialog.show = true"
         ></q-btn>
+        <q-btn flat color="grey-6" class="q-ml-md">
+          <q-icon
+            :name="itemGrid ? 'grid_view' : 'view_list'"
+            @click="toggleItemView"
+          ></q-icon>
+          <q-tooltip>
+            <span
+              v-text="itemGrid ? 'Switch to List View' : 'Switch to Grid View'"
+            ></span>
+          </q-tooltip>
+        </q-btn>
         <q-space></q-space>
         <q-input
           standout
@@ -83,37 +91,102 @@
           </q-card-actions>
         </q-card>
       </div>
-      <div class="q-pb-xl">
-        <div class="row q-col-gutter-md">
-          <div
-            class="col-12 col-sm-6 col-lg-4"
-            v-for="item in items"
-            :key="item.id"
-            @click="showItemDialog(item.id)"
-          >
-            <item-card :item="item"></item-card>
+      <template v-if="itemGrid">
+        <div class="q-pb-xl">
+          <div class="row q-col-gutter-md">
+            <div
+              class="col-12 col-sm-6 col-lg-4 items-stretch"
+              v-for="item in items"
+              :key="item.id"
+            >
+              <item-card
+                :item="item"
+                :currency="inventory.currency"
+                @edit="showItemDialog(item.id)"
+                @delete="deleteItem(item.id)"
+              ></item-card>
+            </div>
           </div>
         </div>
-      </div>
-      <q-card-actions
-        class="bg-transparent absolute-bottom"
-        align="center"
-        v-if="items.length"
-      >
-        <q-pagination
-          v-model="itemsTable.pagination.page"
-          :min="1"
-          :max="itemsTable.pagination.page"
-          :input="true"
-          input-class="text-accent"
-          @update:model-value="getItemsPaginated"
-          boundary-links
+        <q-card-actions
+          class="bg-transparent absolute-bottom"
+          align="center"
+          v-if="items.length"
         >
-        </q-pagination>
-      </q-card-actions>
+          <q-pagination
+            v-model="itemsTable.pagination.page"
+            :min="1"
+            :max="Math.ceil(itemsTable.pagination.rowsNumber / itemsTable.pagination.rowsPerPage)"
+            :input="true"
+            input-class="text-accent"
+            @update:model-value="itemsTabPagination"
+            boundary-links
+          >
+          </q-pagination>
+        </q-card-actions>
+      </template>
+      <template v-else>
+        <q-card v-if="items.length" class="q-pa-lg">
+          <q-table
+            flat
+            bordered
+            title="Items"
+            :rows="items"
+            :columns="itemsTable.columns"
+            row-key="id"
+            v-model:pagination="itemsTable.pagination"
+            @request="getItemsPaginated"
+            :loading="loadingItems"
+            title="Items"
+            no-data-label="No items yet..."
+            no-results-label="No results found"
+          >
+            <template v-slot:header="props">
+              <q-tr :props="props">
+                <q-th auto-width></q-th>
+                <q-th
+                  v-for="col in props.cols"
+                  :key="col.name"
+                  :props="props"
+                  v-text="col.label"
+                ></q-th>
+              </q-tr>
+            </template>
+            <template v-slot:body="props">
+              <q-tr :props="props">
+                <q-td auto-width class="q-gutter-x-sm">
+                  <q-btn
+                    flat
+                    unlevated
+                    size="sm"
+                    padding="md"
+                    color="grey-6"
+                    dense
+                    @click="deleteItem(props.row.id)"
+                    icon="delete"
+                  ></q-btn>
+                  <q-btn
+                    flat
+                    unlevated
+                    size="sm"
+                    padding="md"
+                    color="grey-6"
+                    dense
+                    @click="showItemDialog(props.row.id)"
+                    icon="edit"
+                  ></q-btn>
+                </q-td>
+                <q-td v-for="col in props.cols" :key="col.name" :props="props">
+                  <span v-text="col.value"></span>
+                </q-td>
+              </q-tr>
+            </template>
+          </q-table>
+        </q-card>
+      </template>
     </section>
     <section v-if="tab === 'managers'">
-      <q-toolbar class="q-mb-md">
+      <q-toolbar class="q-mb-md q-px-none">
         <q-btn
           color="primary"
           label="Add Manager"
@@ -121,7 +194,7 @@
         ></q-btn>
       </q-toolbar>
       <div class="row">
-        <q-list bordered class="col-12 col-md-8 rounded-borders">
+        <q-list bordered class="col-12 rounded-borders">
           <q-expansion-item
             v-for="manager in managers"
             :key="manager.id"
@@ -133,6 +206,40 @@
           >
             <q-card>
               <q-card-section>
+                <div class="q-pa-md q-gutter-md">
+                  <q-btn
+                    color="primary"
+                    label="Dashboard"
+                    :href="`/inventory/manager?manager_id=${manager.id}`"
+                    target="_blank"
+                  ></q-btn>
+                  <div class="float-right q-gutter-x-sm">
+                    <q-btn
+                      flat
+                      color="grey-6"
+                      size="sm"
+                      padding="md"
+                      icon="edit"
+                      @click="showManagerDialog(manager.id)"
+                    >
+                      <q-tooltip class="bg-white text-primary">Edit</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      color="grey-6"
+                      size="sm"
+                      padding="md"
+                      icon="delete"
+                      @click="deleteManager(manager.id)"
+                    >
+                      <q-tooltip class="bg-white text-primary"
+                        >Delete</q-tooltip
+                      >
+                    </q-btn>
+                  </div>
+                </div>
+              </q-card-section>
+              <q-card-section>
                 <q-table
                   flat
                   bordered
@@ -143,6 +250,8 @@
                   v-model:pagination="itemsTable.pagination"
                   @request="getManagerItems(manager.id)"
                   :loading="loadingItems"
+                  no-data-label="No items submitted by this manager"
+                  no-results-label="No results found"
                 >
                   <template v-slot:top>
                     <q-space></q-space>
@@ -209,187 +318,116 @@
       </div>
     </section>
     <section v-if="tab === 'services'">
-      <h2>Services</h2>
+      <q-toolbar class="q-mb-md q-px-none">
+        <q-btn
+          color="primary"
+          label="Add Service"
+          @click="serviceDialog.show = true"
+        ></q-btn>
+      </q-toolbar>
+      <q-card v-if="services.length" class="q-pa-lg">
+        <q-table
+          flat
+          bordered
+          title="Services"
+          :rows="services"
+          :columns="servicesTable.columns"
+          row-key="id"
+          v-model:pagination="servicesTable.pagination"
+          @request="getServicesPaginated"
+          :loading="loadingServices"
+          no-data-label="No services yet..."
+          no-results-label="No results found"
+        >
+          <template v-slot:top>
+            <q-space></q-space>
+            <q-input
+              standout
+              dense
+              debounce="300"
+              color="primary"
+              v-model="servicesTable.search"
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+          </template>
+          <template v-slot:header="props">
+            <q-tr :props="props">
+              <q-th auto-width></q-th>
+              <q-th
+                v-for="col in props.cols"
+                :key="col.name"
+                :props="props"
+                v-text="col.label"
+              ></q-th>
+            </q-tr>
+          </template>
+          <template v-slot:body="props">
+            <q-tr :props="props">
+              <q-td auto-width>
+                <q-btn
+                  flat
+                  color="grey-6"
+                  size="sm"
+                  padding="md"
+                  @click="deleteService(props.row.id)"
+                  icon="delete"
+                ></q-btn>
+                <q-btn
+                  flat
+                  color="grey-6"
+                  size="sm"
+                  padding="md"
+                  @click="showServiceDialog(props.row.id)"
+                  icon="edit"
+                ></q-btn>
+              </q-td>
+
+              <q-td v-for="col in props.cols" :key="col.name" :props="props">
+                <span v-text="col.value"></span>
+                <q-btn
+                  v-if="col.name === 'api_key'"
+                  icon="content_copy"
+                  size="sm"
+                  padding="sm"
+                  color="grey-6"
+                  flat
+                  class="cursor-pointer q-mr-xs"
+                  @click="copyText(props.row.api_key)"
+                >
+                  <q-tooltip>Copy API Key</q-tooltip>
+                </q-btn>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
+      </q-card>
     </section>
     <section v-if="tab === 'orders'">
       <h2>Orders</h2>
     </section>
-    <!-- </q-card> -->
-    <!-- </div> -->
-    <!-- <div class="col-12 col-md-8 col-lg-7 q-gutter-y-md">
-    <q-card>
-      <q-card-section>
-        <q-btn unelevated color="primary" @click="showInventoryDialog"
-          >New Inventory</q-btn
-        >
-      </q-card-section>
-    </q-card>
-    <q-card v-if="inventories.length">
-      <q-list>
-        <template v-for="(inventory, index) in inventories" :key="inventory.id">
-          <q-expansion-item
-            group="items"
-            expand-separator
-            icon="inventory"
-            :label="inventory.name"
-            :caption="inventory.currency"
-            header-class="q-py-md"
-            @show="setOpenInventory(inventory.id)"
-          >
-            <q-card>
-              <q-card-section>
-                <div class="q-pa-md q-gutter-md">
-                  <q-btn
-                    color="primary"
-                    label="Dashboard"
-                    :href="`/inventory/dashboard/${inventory.id}`"
-                    target="_blank"
-                  ></q-btn>
-                  <q-btn
-                    color="primary"
-                    label="Add Manager"
-                    @click="managerDialog.show = true"
-                  ></q-btn>
-                  <div class="float-right q-gutter-x-sm">
-                    <q-btn
-                      flat
-                      dense
-                      icon="edit"
-                      color="cyan"
-                      @click="showInventoryDialog(inventory.id)"
-                    >
-                      <q-tooltip class="bg-white text-primary">Edit</q-tooltip>
-                    </q-btn>
-                    <q-btn
-                      flat
-                      dense
-                      icon="delete"
-                      color="red"
-                      @click="deleteInventory(inventory.id)"
-                    >
-                      <q-tooltip class="bg-white text-primary"
-                        >Delete</q-tooltip
-                      >
-                    </q-btn>
-                  </div>
-                </div>
-              </q-card-section>
-              <q-card-section>
-                <q-table
-                  flat
-                  bordered
-                  title="Items"
-                  :rows="items"
-                  :columns="itemsTable.columns"
-                  row-key="id"
-                  v-model:pagination="itemsTable.pagination"
-                  @request="getItemsPaginated"
-                  :loading="loadingItems"
-                >
-                  <template v-slot:top>
-                    <q-btn
-                      color="primary"
-                      label="Add Item"
-                      @click="itemDialog.show = true"
-                    ></q-btn>
-                    <q-space></q-space>
-                    <q-input
-                      standout
-                      dense
-                      debounce="300"
-                      color="primary"
-                      v-model="itemsTable.search"
-                    >
-                      <template v-slot:append>
-                        <q-icon name="search" />
-                      </template>
-                    </q-input>
-                  </template>
-                  <template v-slot:header="props">
-                    <q-tr :props="props">
-                      <q-th auto-width></q-th>
-                      <q-th auto-width></q-th>
-                      <q-th
-                        v-for="col in props.cols"
-                        :key="col.name"
-                        :props="props"
-                        v-text="col.label"
-                      ></q-th>
-                    </q-tr>
-                  </template>
-                  <template v-slot:body="props">
-                    <q-tr :props="props">
-                      <q-td auto-width>
-                        <q-btn
-                          unlevated
-                          size="sm"
-                          color="pink"
-                          dense
-                          @click="deleteItem(props.row.id)"
-                          icon="delete"
-                        ></q-btn>
-                      </q-td>
-                      <q-td auto-width>
-                        <q-btn
-                          unlevated
-                          size="sm"
-                          color="accent"
-                          dense
-                          @click="showItemDialog(props.row.id)"
-                          icon="edit"
-                        ></q-btn>
-                      </q-td>
-                      <q-td
-                        v-for="col in props.cols"
-                        :key="col.name"
-                        :props="props"
-                        v-text="col.value"
-                      >
-                      </q-td>
-                    </q-tr>
-                  </template>
-                </q-table>
-              </q-card-section>
-              <q-card-section class="q-mt-lg" v-if="managers.length">
-                <h6 class="text-subtitle1 q-my-none">Managers</h6>
-                <q-list bordered>
-                  <q-item v-for="manager in managers" :key="manager.id">
-                    <q-item-section>
-                      <q-item-label v-text="manager.name"></q-item-label>
-                      <q-item-label
-                        caption
-                        v-text="manager.email || 'No email provided'"
-                      ></q-item-label>
-                    </q-item-section>
-                    <q-item-section side>
-                      <div class="">
-                        <q-icon name="preview"></q-icon>
-                        <q-icon name="edit"></q-icon>
-                        <q-icon name="delete"></q-icon>
-                      </div>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card-section>
-            </q-card>
-          </q-expansion-item>
-          <q-separator v-if="index < inventories.length -1"></q-separator>
-        </template>
-      </q-list>
-    </q-card>
-  </div> -->
-    <!-- <div class="col-12 col-md-4 col-lg-5 q-gutter-y-md">
-    <q-card>
-      <q-card-section>
-        <h6 class="text-subtitle1 q-my-none">
-          {{SITE_TITLE}} Inventory extension
-        </h6>
-      </q-card-section>
-    </q-card>
-  </div> -->
   </div>
 </div>
 {% endblock %} {% block scripts %} {{ window_vars(user) }}
+<style scoped>
+  .text-section {
+    display: flex;
+    flex: 1;
+  }
+
+  .text-col {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+  }
+  .description {
+    flex: 1;
+  }
+</style>
+<script src="{{ static_url_for('inventory/static', path='js/utils.js') }}"></script>
 <script src="{{ static_url_for('inventory/static', path='js/index.js') }}"></script>
 <script src="{{ static_url_for('inventory/static', path='components/item-card.js') }}"></script>
+<script src="{{ static_url_for('inventory/static', path='components/photo-gallery-form.js') }}"></script>
 {% endblock %}
