@@ -192,6 +192,16 @@ async def delete_item(item_id: str) -> None:
     )
 
 
+async def delete_inventory_items(inventory_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.items
+        WHERE inventory_id = :inventory_id
+        """,
+        {"inventory_id": inventory_id},
+    )
+
+
 async def create_manager(data: CreateManager) -> Manager:
     manager_id = urlsafe_short_hash()
     manager = Manager(
@@ -237,6 +247,16 @@ async def delete_manager(manager_id: str) -> None:
         WHERE id = :manager_id
         """,
         {"manager_id": manager_id},
+    )
+
+
+async def delete_inventory_managers(inventory_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.managers
+        WHERE inventory_id = :inventory_id
+        """,
+        {"inventory_id": inventory_id},
     )
 
 
@@ -303,6 +323,16 @@ async def delete_external_service(service_id: str) -> None:
     )
 
 
+async def delete_inventory_external_services(inventory_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.external_services
+        WHERE inventory_id = :inventory_id
+        """,
+        {"inventory_id": inventory_id},
+    )
+
+
 async def update_external_service(data: ExternalService) -> ExternalService:
     data.last_used_at = datetime.now(timezone.utc)
     await db.update("inventory.external_services", data)
@@ -329,6 +359,16 @@ async def get_inventory_update_logs_paginated(
         values=params,
         filters=filters,
         model=InventoryUpdateLog,
+    )
+
+
+async def delete_inventory_update_logs(inventory_id: str) -> None:
+    await db.execute(
+        """
+        DELETE FROM inventory.audit_logs
+        WHERE inventory_id = :inventory_id
+        """,
+        {"inventory_id": inventory_id},
     )
 
 

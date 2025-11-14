@@ -24,10 +24,13 @@ from .crud import (
     create_manager,
     delete_external_service,
     delete_inventory,
+    delete_inventory_external_services,
+    delete_inventory_items,
+    delete_inventory_managers,
+    delete_inventory_update_logs,
     delete_item,
     delete_manager,
     get_external_service,
-    get_external_service_by_api_key,
     get_external_services,
     get_inventories,
     get_inventory,
@@ -114,6 +117,12 @@ async def api_delete_inventory(
             status_code=HTTPStatus.NOT_FOUND,
             detail="Cannot delete inventory.",
         )
+    # delete all related data (items, categories, managers, services, logs) in cascade
+    await delete_inventory_items(inventory_id)
+    await delete_inventory_managers(inventory_id)
+    await delete_inventory_external_services(inventory_id)
+    await delete_inventory_update_logs(inventory_id)
+    # finally delete the inventory
     await delete_inventory(user.id, inventory_id)
 
 

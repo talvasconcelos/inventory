@@ -307,6 +307,7 @@ window.app = Vue.createApp({
       return !data.name || !data.currency
     },
     async getInventories() {
+      if (!this.inventory) return
       try {
         const {data} = await LNbits.api.request(
           'GET',
@@ -388,6 +389,15 @@ window.app = Vue.createApp({
             this.inventory = null
             this.openInventory = null
             this.items = []
+            this.categories = []
+            this.managers = []
+            this.services = []
+            this.logs = []
+            this.closeInventoryDialog()
+            this.$q.notify({
+              type: 'positive',
+              message: 'Inventory deleted successfully.'
+            })
           } catch (error) {
             console.error('Error deleting inventory:', error)
             LNbits.utils.notifyError(error)
@@ -807,9 +817,5 @@ window.app = Vue.createApp({
         console.error('Error fetching currencies:', error)
         LNbits.utils.notifyError(error)
       })
-    console.log(
-      'isAdmin:',
-      this.g.user !== null && this.g.user.id === this.inventory.user_id
-    )
   }
 })

@@ -20,7 +20,7 @@
         v-model="inventoryDialog.data.currency"
         :options="currencyOptions"
         label="Currency *"
-        :disable="inventoryDialog.data.id !== null"
+        :disable="inventory !== null"
       ></q-select>
       <q-select
         filled
@@ -94,6 +94,30 @@
           >Create Inventory</q-btn
         >
       </q-card-actions>
+      <q-card-section v-if="inventoryDialog.data.id">
+        <q-expansion-item
+          expand-separator
+          label="Delete Inventory"
+          header-class="text-negative"
+        >
+          <q-card>
+            <q-card-section>
+              <div class="text-subtitle2 q-mt-sm">
+                Deleting this inventory will remove all its items and cannot be
+                undone. Please proceed with caution.
+              </div>
+            </q-card-section>
+            <q-card-actions align="center">
+              <q-btn
+                unelevated
+                color="negative"
+                label="Delete Inventory"
+                @click="deleteInventory(inventoryDialog.data.id)"
+              ></q-btn>
+            </q-card-actions>
+          </q-card>
+        </q-expansion-item>
+      </q-card-section>
     </q-form>
   </q-card>
 </q-dialog>
