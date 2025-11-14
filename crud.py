@@ -9,10 +9,13 @@ from .models import (
     CreateCategory,
     CreateExternalService,
     CreateInventory,
+    CreateInventoryUpdateLog,
     CreateItem,
     CreateManager,
     ExternalService,
     Inventory,
+    InventoryLogFilters,
+    InventoryUpdateLog,
     Item,
     ItemFilters,
     Manager,
@@ -133,6 +136,23 @@ async def get_inventory_items_paginated(
     )
 
 
+async def get_items_by_ids(inventory_id: str, item_ids: list[str]) -> list[Item]:
+    if not item_ids:
+        return []
+    if isinstance(item_ids, str):
+        item_ids = [item_ids]
+    q = ",".join([f"'{item_id}'" for item_id in item_ids])
+    items = await db.fetchall(
+        f"""
+        SELECT * FROM inventory.items
+        WHERE inventory_id = :inventory_id AND id IN ({q})
+        """,
+        {"inventory_id": inventory_id},
+        model=Item,
+    )
+    return items
+
+
 async def get_item(item_id: str) -> Item | None:
     return await db.fetchone(
         """
@@ -235,7 +255,7 @@ async def create_external_service(data: CreateExternalService) -> ExternalServic
     service_id = urlsafe_short_hash()
     ext_service = ExternalService(
         id=service_id,
-        api_key=create_api_key(),
+        api_key=create_api_key(data.inventory_id, service_id),
         **data.dict(),
     )
     await db.insert("inventory.external_services", ext_service)
@@ -290,5 +310,39 @@ async def update_external_service(data: ExternalService) -> ExternalService:
 
 
 ## Log/Audit
+async def create_inventory_update_log(
+    data: CreateInventoryUpdateLog,
+) -> None:
+    await db.insert("inventory.audit_logs", data)
 
-# async def create_external_service()
+
+async def get_inventory_update_logs_paginated(
+    inventory_id: str,
+    filters: Filters[InventoryLogFilters] | None = None,
+) -> Page[InventoryUpdateLog]:
+    where = ["inventory_id = :inventory_id"]
+    params = {"inventory_id": inventory_id}
+
+    return await db.fetch_page(
+        "SELECT * FROM inventory.audit_logs",
+        where=where,
+        values=params,
+        filters=filters,
+        model=InventoryUpdateLog,
+    )
+
+
+async def check_idempotency(idempotency_key: str) -> bool:
+    """
+    Check if this request has already been processed.
+    Returns True if already processed.
+    """
+    existing_log = await db.fetchone(
+        """
+        SELECT * FROM inventory.audit_logs
+        WHERE idempotency_key = :idempotency_key
+        """,
+        {"idempotency_key": idempotency_key},
+        model=InventoryUpdateLog,
+    )
+    return existing_log is not None

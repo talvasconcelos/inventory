@@ -187,7 +187,7 @@ class InventoryLogFilters(FilterModel):
     idempotency_key: str | None = None
     item_id: str | None = None
     created_at: datetime | None = None
-    source: UpdateSource | None = None
+    source: str | None = None
 
 
 # Webhook models
@@ -220,3 +220,23 @@ class WebhookPayload(BaseModel):
         if time_diff > 300:  # 5 minutes
             raise ValueError("Timestamp too old or in future")
         return v
+
+
+# create an example body json for the webhook payload
+# {
+#   "inventory_id": "inv_123456",
+#   "items": [
+#     {
+#       "item_id": "item_123",
+#       "quantity_change": 5,
+#       "operation": "subtract"
+#     },
+#     {
+#       "item_id": "item_456",
+#       "quantity_change": 10,
+#       "operation": "add"
+#     }
+#   ],
+#   "timestamp": "",
+#   "idempotency_key": "unique_key_1234567890"
+# }

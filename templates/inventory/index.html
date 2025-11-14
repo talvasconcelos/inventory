@@ -406,7 +406,29 @@
       </q-card>
     </section>
     <section v-if="tab === 'orders'">
-      <h2>Orders</h2>
+      <q-toolbar class="q-mb-md q-px-none">
+        <q-btn
+          color="primary"
+          label="Refresh Stock Logs"
+          @click="getStockLogsPaginated"
+        ></q-btn>
+      </q-toolbar>
+      <q-card v-if="logs.length" class="q-pa-lg">
+        <q-table
+          flat
+          bordered
+          title="Stock Update Log"
+          :rows="logs"
+          :columns="stockLogsTable.columns"
+          row-key="id"
+          v-model:pagination="stockLogsTable.pagination"
+          @request="getStockLogsPaginated"
+          :loading="loadingStockLogs"
+          no-data-label="No stock logs yet..."
+          no-results-label="No results found"
+        >
+        </q-table>
+      </q-card>
     </section>
   </div>
 </div>

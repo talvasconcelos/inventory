@@ -1,61 +1,47 @@
+from http import HTTPStatus
+
+import jwt
+from fastapi import HTTPException
+
+from lnbits.helpers import create_access_token, urlsafe_short_hash
+from lnbits.settings import settings
 from lnbits.utils.crypto import random_secret_and_hash
 
+# from .crud import update_external_service
+from .models import ExternalService
 
-def create_api_key() -> str:
+
+def create_api_key(inventory_id: str, service_id: str) -> str:
     """Generate a new API key for external services."""
-    key = random_secret_and_hash()
-    return "sk_" + key[1]
+    api_key = create_access_token(
+        {
+            "inventory_id": inventory_id,
+            "service_id": service_id,
+        }
+    )
+    return api_key
 
 
-async def verify_api_key(api_key: str) -> dict | None:
+def extract_token_payload(token: str):
+    try:
+        payload: dict = jwt.decode(token, settings.auth_secret_key, ["HS256"])
+        return payload
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid token."
+        ) from None
+
+
+def check_item_tags(service_allowed_tags: list[str], item_tags: list[str]) -> bool:
+    """Check if any of the item's tags are allowed by the external service.
+
+    Args:
+        service_allowed_tags (list[str]): List of tags allowed by the external service.
+        item_tags (list[str]): List of tags associated with the item.
+
+    Returns:
+        bool: True if at least one tag matches, False otherwise.
     """
-    Verify API key and return service info.
-    Replace with your actual database lookup.
-    """
-    # TODO: Query your database
-    # Example:
-    # service = await db.query(ExternalService).filter(
-    #     ExternalService.api_key == api_key,
-    #     ExternalService.is_active == True
-    # ).first()
-    # if service:
-    #     # Update last_used_at
-    #     service.last_used_at = datetime.now(timezone.utc)
-    #     await db.commit()
-    #     return {"id": service.id, "name": service.service_name}
-    # return None
-
-    # Mock for demonstration
-    valid_keys = {
-        "sk_shopify_abc123": {"id": "shopify_001", "name": "Shopify Store"},
-        "sk_pos_xyz789": {"id": "pos_002", "name": "POS System"},
-    }
-    return valid_keys.get(api_key)
-
-
-async def check_idempotency(idempotency_key: str) -> bool:
-    """
-    Check if this request has already been processed.
-    Returns True if already processed.
-    """
-    # TODO: Check your database
-    # Example:
-    # exists = await db.query(InventoryUpdateLog).filter(
-    #     InventoryUpdateLog.idempotency_key == idempotency_key
-    # ).first()
-    # return exists is not None
-
-    return False
-
-
-async def get_current_stock(inventory_id: str, item_id: str) -> int:
-    """Get current stock quantity for an item"""
-    # TODO: Query your inventory database
-    # Example:
-    # item = await db.query(InventoryStock).filter(
-    #     InventoryStock.inventory_id == inventory_id,
-    #     InventoryStock.item_id == item_id
-    # ).first()
-    # return item.quantity if item else 0
-
-    return 100  # Mock
+    if service_allowed_tags == []:
+        return True
+    return any(tag in service_allowed_tags for tag in item_tags)

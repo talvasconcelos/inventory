@@ -21,6 +21,9 @@ window.app.component('item-card', {
         : 'green'
     },
     computePrice() {
+      if (this.currency === 'sats') {
+        return this.item.price ? `${this.item.price} sats` : 'Free'
+      }
       return this.item.price
         ? LNbits.utils.formatCurrency(this.item.price, this.currency)
         : 'Free'

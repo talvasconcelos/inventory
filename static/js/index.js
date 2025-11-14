@@ -7,15 +7,16 @@ window.app = Vue.createApp({
       tab: 'items',
       tabOptions: [
         {label: 'Items', value: 'items'},
-        {label: 'Managers', value: 'managers'},
+        // {label: 'Stock Managers', value: 'managers'},
         {label: 'Services', value: 'services'},
-        {label: 'Orders', value: 'orders'}
+        {label: 'Stock Logs', value: 'orders'}
       ],
       currencyOptions: [],
       inventory: null,
       managers: [],
       services: [],
       items: [],
+      logs: [],
       inventoryDialog: {
         show: false,
         data: {}
@@ -34,7 +35,8 @@ window.app = Vue.createApp({
       itemDialog: {
         show: false,
         data: {},
-        gallery: []
+        gallery: [],
+        currency: null
       },
       itemsTable: {
         columns: [
@@ -197,6 +199,46 @@ window.app = Vue.createApp({
         },
         search: '',
         filter: {}
+      },
+      stockLogsTable: {
+        columns: [
+          {
+            name: 'timestamp',
+            align: 'left',
+            label: 'Timestamp',
+            field: 'timestamp',
+            format: val => LNbits.utils.formatDateString(val),
+            sortable: true
+          },
+          {
+            name: 'item_name',
+            align: 'left',
+            label: 'Item Name',
+            field: 'item_name',
+            sortable: true
+          },
+          {
+            name: 'change_quantity',
+            align: 'left',
+            label: 'Change Quantity',
+            field: 'change_quantity',
+            sortable: true
+          },
+          {
+            name: 'reason',
+            align: 'left',
+            label: 'Reason',
+            field: 'reason',
+            sortable: false
+          }
+        ],
+        pagination: {
+          rowsPerPage: 10,
+          page: 1,
+          rowsNumber: 10
+        },
+        search: '',
+        filter: {}
       }
     }
   },
@@ -218,6 +260,15 @@ window.app = Vue.createApp({
         await this.getItemsPaginated()
       } else if (newTab === 'services') {
         await this.getServices()
+      } else if (newTab === 'orders') {
+        this.stockLogsTable.pagination = {
+          rowsPerPage: 10,
+          page: 1,
+          rowsNumber: 10
+        }
+        this.stockLogsTable.search = ''
+        this.stockLogsTable.filter = {}
+        await this.getStockLogsPaginated()
       }
     }
   },
@@ -258,6 +309,7 @@ window.app = Vue.createApp({
         this.inventory = {...data} // Change to single inventory
         this.openInventory = this.inventory.id
         this.openInventoryCurrency = this.inventory.currency
+        this.itemDialog.currency = this.inventory.currency
         await this.getItemsPaginated()
         await this.getCategories()
         await this.getManagers()
@@ -714,6 +766,25 @@ window.app = Vue.createApp({
             LNbits.utils.notifyError(error)
           }
         })
+    },
+    async getStockLogsPaginated(props) {
+      console.log('Getting paginated stock logs with props:', props)
+      console.log('Current stockLogsTable state:', this.stockLogsTable)
+      try {
+        const params = LNbits.utils.prepareFilterQuery(
+          this.stockLogsTable,
+          props
+        )
+        const {data} = await LNbits.api.request(
+          'GET',
+          `/inventory/api/v1/logs/${this.openInventory}/paginated?${params}`
+        )
+        this.logs = [...data.data]
+        this.stockLogsTable.pagination.rowsNumber = data.total
+      } catch (error) {
+        console.error('Error fetching stock logs:', error)
+        LNbits.utils.notifyError(error)
+      }
     }
   },
   // To run on startup
