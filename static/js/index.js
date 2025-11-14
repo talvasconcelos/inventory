@@ -203,33 +203,47 @@ window.app = Vue.createApp({
       stockLogsTable: {
         columns: [
           {
-            name: 'timestamp',
+            name: 'source',
             align: 'left',
-            label: 'Timestamp',
-            field: 'timestamp',
+            label: 'Source',
+            field: 'source',
+            sortable: true
+          },
+          {
+            name: 'quantity_change',
+            align: 'left',
+            label: 'Quantity Change',
+            field: 'quantity_change',
+            sortable: true
+          },
+          {
+            name: 'quantity_after',
+            align: 'left',
+            label: 'Quantity After',
+            field: 'quantity_after',
+            sortable: true
+          },
+          {
+            name: 'item_id',
+            align: 'left',
+            label: 'Item ID',
+            field: 'item_id',
+            sortable: true
+          },
+          {
+            name: 'external_service_id',
+            align: 'left',
+            label: 'External Service ID',
+            field: 'external_service_id',
+            sortable: true
+          },
+          {
+            name: 'created_at',
+            align: 'left',
+            label: 'Created At',
+            field: 'created_at',
             format: val => LNbits.utils.formatDateString(val),
             sortable: true
-          },
-          {
-            name: 'item_name',
-            align: 'left',
-            label: 'Item Name',
-            field: 'item_name',
-            sortable: true
-          },
-          {
-            name: 'change_quantity',
-            align: 'left',
-            label: 'Change Quantity',
-            field: 'change_quantity',
-            sortable: true
-          },
-          {
-            name: 'reason',
-            align: 'left',
-            label: 'Reason',
-            field: 'reason',
-            sortable: false
           }
         ],
         pagination: {
@@ -261,13 +275,6 @@ window.app = Vue.createApp({
       } else if (newTab === 'services') {
         await this.getServices()
       } else if (newTab === 'orders') {
-        this.stockLogsTable.pagination = {
-          rowsPerPage: 10,
-          page: 1,
-          rowsNumber: 10
-        }
-        this.stockLogsTable.search = ''
-        this.stockLogsTable.filter = {}
         await this.getStockLogsPaginated()
       }
     }
