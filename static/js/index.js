@@ -307,12 +307,16 @@ window.app = Vue.createApp({
       return !data.name || !data.currency
     },
     async getInventories() {
-      if (!this.inventory) return
       try {
         const {data} = await LNbits.api.request(
           'GET',
           '/inventory/api/v1/inventories'
         )
+        if (data.length === 0) {
+          this.inventory = null
+          this.openInventory = null
+          return
+        }
         data.tags = data.tags.split(',') || []
         this.inventory = {...data} // Change to single inventory
         this.openInventory = this.inventory.id
