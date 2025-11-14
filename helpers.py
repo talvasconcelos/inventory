@@ -3,12 +3,8 @@ from http import HTTPStatus
 import jwt
 from fastapi import HTTPException
 
-from lnbits.helpers import create_access_token, urlsafe_short_hash
+from lnbits.helpers import create_access_token
 from lnbits.settings import settings
-from lnbits.utils.crypto import random_secret_and_hash
-
-# from .crud import update_external_service
-from .models import ExternalService
 
 
 def create_api_key(inventory_id: str, service_id: str) -> str:
@@ -33,15 +29,6 @@ def extract_token_payload(token: str):
 
 
 def check_item_tags(service_allowed_tags: list[str], item_tags: list[str]) -> bool:
-    """Check if any of the item's tags are allowed by the external service.
-
-    Args:
-        service_allowed_tags (list[str]): List of tags allowed by the external service.
-        item_tags (list[str]): List of tags associated with the item.
-
-    Returns:
-        bool: True if at least one tag matches, False otherwise.
-    """
     if service_allowed_tags == []:
         return True
     return any(tag in service_allowed_tags for tag in item_tags)

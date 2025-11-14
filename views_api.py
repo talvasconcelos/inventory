@@ -139,7 +139,6 @@ async def api_get_items(
             status_code=HTTPStatus.NOT_FOUND,
             detail="Inventory not found.",
         )
-    print(f"API: {filters}")
     page = await get_inventory_items_paginated(inventory_id, filters)
 
     if user_id and inventory.dict().get("user_id", None) == user_id:
