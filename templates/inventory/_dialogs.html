@@ -75,26 +75,7 @@
           <span v-text="'Whether the prices include tax or not.'"></span>
         </q-tooltip>
       </q-toggle>
-      <q-card-actions class="q-mt-lg" align="between">
-        <q-btn v-close-popup flat color="grey">Cancel</q-btn>
-        <q-btn
-          v-if="inventoryDialog.data.id"
-          unelevated
-          color="primary"
-          type="submit"
-          :disable="createOrUpdateDisabled()"
-          >Update Inventory</q-btn
-        >
-        <q-btn
-          v-else
-          unelevated
-          color="primary"
-          :disable="createOrUpdateDisabled()"
-          type="submit"
-          >Create Inventory</q-btn
-        >
-      </q-card-actions>
-      <q-card-section v-if="inventoryDialog.data.id">
+      <q-card-section v-if="inventoryDialog.data.id" class="q-px-none">
         <q-expansion-item
           expand-separator
           label="Delete Inventory"
@@ -118,6 +99,25 @@
           </q-card>
         </q-expansion-item>
       </q-card-section>
+      <q-card-actions class="q-mt-lg" align="between">
+        <q-btn v-close-popup flat color="grey">Cancel</q-btn>
+        <q-btn
+          v-if="inventoryDialog.data.id"
+          unelevated
+          color="primary"
+          type="submit"
+          :disable="createOrUpdateDisabled()"
+          >Update Inventory</q-btn
+        >
+        <q-btn
+          v-else
+          unelevated
+          color="primary"
+          :disable="createOrUpdateDisabled()"
+          type="submit"
+          >Create Inventory</q-btn
+        >
+      </q-card-actions>
     </q-form>
   </q-card>
 </q-dialog>
@@ -306,7 +306,7 @@
           color="primary"
           type="submit"
           :label="itemDialog.data.id ? 'Update Item' : 'Create Item'"
-          :disable="!itemDialog.data.name || !itemDialog.data.price || itemDialog.data.unit_cost === null"
+          :disable="!itemDialog.data.name || !itemDialog.data.price"
         >
         </q-btn>
       </q-card-actions>

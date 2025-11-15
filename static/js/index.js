@@ -82,10 +82,23 @@ window.app = Vue.createApp({
           },
           {
             name: 'quantity_in_stock',
-            align: 'left',
+            align: 'center',
             label: 'Quantity',
             field: 'quantity_in_stock',
             sortable: true
+          },
+          {
+            name: 'low_stock',
+            align: 'center',
+            label: 'Low Stock',
+            field: 'reorder_threshold',
+            sortable: true,
+            format: (val, row) => {
+              if (val === null || val === undefined) return ''
+              return row.quantity_in_stock && val >= row.quantity_in_stock
+                ? '⚠️'
+                : ''
+            }
           },
           {
             name: 'tags',
@@ -504,11 +517,8 @@ window.app = Vue.createApp({
         )
         return data.id
       } catch (error) {
-        const msg =
-          error.response?.data?.detail || error.message || 'Upload failed'
-        console.error('Photo upload error:', msg)
-        LNbits.utils.notifyError(`Photo upload failed: ${msg}`)
-        throw error
+        console.error('Photo upload error:', error)
+        return null
       }
     },
     async addItem() {
@@ -519,6 +529,10 @@ window.app = Vue.createApp({
             .filter(p => p.file)
             .map(p => this.uploadPhoto(p.file))
         )
+        if (assetIds.includes(null)) {
+          LNbits.utils.notifyError('One or more photo uploads failed')
+          return
+        }
         this.itemDialog.data.images = toCsv(assetIds)
         const {data} = await LNbits.api.request(
           'POST',
@@ -527,13 +541,12 @@ window.app = Vue.createApp({
           this.itemDialog.data
         )
         console.log('Item added:', data)
-        this.items = [...this.items, data]
+        this.items = [...this.items, mapItems(data)]
+        this.itemDialog.show = false
+        this.itemDialog.data = {}
       } catch (error) {
         console.error('Error adding item:', error)
         LNbits.utils.notifyError(error)
-      } finally {
-        this.itemDialog.show = false
-        this.itemDialog.data = {}
       }
     },
     async updateItem(data) {

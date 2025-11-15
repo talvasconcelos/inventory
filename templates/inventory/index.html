@@ -49,7 +49,7 @@
         ></q-btn>
         <q-btn flat color="grey-6" class="q-ml-md">
           <q-icon
-            :name="itemGrid ? 'grid_view' : 'view_list'"
+            :name="itemGrid ? 'view_list' : 'grid_view'"
             @click="toggleItemView"
           ></q-icon>
           <q-tooltip>
@@ -72,7 +72,10 @@
           </template>
         </q-input>
       </q-toolbar>
-      <div v-if="!items.length" class="flex flex-center q-py-xl">
+      <div
+        v-if="!items.length && !loadingItems"
+        class="flex flex-center q-py-xl"
+      >
         <q-card class="q-my-xl q-pa-lg">
           <q-card-section class="text-center">
             <div class="text-h6">No items yet...</div>
@@ -144,11 +147,8 @@
             <template v-slot:header="props">
               <q-tr :props="props">
                 <q-th auto-width></q-th>
-                <q-th
-                  v-for="col in props.cols"
-                  :key="col.name"
-                  :props="props"
-                  v-text="col.label"
+                <q-th v-for="col in props.cols" :key="col.name" :props="props"
+                  ><span v-text="col.label"></span
                 ></q-th>
               </q-tr>
             </template>
